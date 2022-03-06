@@ -6,7 +6,7 @@ SetWorkingDir %A_ScriptDir%  ; Ensures a consistent starting directory.
 #SingleInstance, ignore 
 sPath := ""
 sDest := ""
-sExt  := "das"
+sCustomDest := ""
 sExts :=""
 sBackupt := "Backup is Running!"
 sBackupf := "Backup is Stopped!"
@@ -23,10 +23,52 @@ red:="c0xe1256b"
 blue:="c0x056bed"
 lightgrey:="bad8cf"
 lightgreen:="d0e970"
+
+Zip(sDir, sZip)
+{
+   If Not FileExist(sZip)
+   {
+    Header1 := "PK" . Chr(5) . Chr(6)
+    VarSetCapacity(Header2, 18, 0)
+    file := FileOpen(sZip,"w")
+    file.Write(Header1)
+    file.RawWrite(Header2,18)
+    file.close()
+   }
+    psh := ComObjCreate( "Shell.Application" )
+    pzip := psh.Namespace( sZip )
+    pzip.CopyHere( sDir, 4|16 )
+    Loop {
+        sleep 100
+        zippedItems := pzip.Items().count
+        ToolTip Zipping in progress..
+    } Until zippedItems=1 ;because sDir is just one file or folder
+    ToolTip
+}
+
+Unz(sZip, sUnz)
+{
+    fso := ComObjCreate("Scripting.FileSystemObject")
+    If Not fso.FolderExists(sUnz)  ;http://www.autohotkey.com/forum/viewtopic.php?p=402574
+       fso.CreateFolder(sUnz)
+    psh  := ComObjCreate("Shell.Application")
+    zippedItems := psh.Namespace( sZip ).items().count
+    psh.Namespace( sUnz ).CopyHere( psh.Namespace( sZip ).items, 4|16 )
+    Loop {
+        sleep 100
+        unzippedItems := psh.Namespace( sUnz ).items().count
+        ToolTip Unzipping in progress..
+        IfEqual,zippedItems,%unzippedItems%
+            break
+    }
+    ToolTip
+}
+
 if (FileExist("STB_settings.ini"))
 {   
 	IniRead, sPath, STB_settings.ini, Paths, Files Location 
-	IniRead, sDest, STB_settings.ini, Paths, Backups Location 
+	IniRead, sDest, STB_settings.ini, Paths, Backups Location
+    IniRead, sCustomDest, STB_settings.ini, History, Last Manual Backup Location
 	IniRead, tInterval, STB_settings.ini, Option, Backup Interval , 300000 
 	IniRead, iBackupCount, STB_settings.ini, Option, Backups Count , 10
 	IniRead, iBkupNum, STB_settings.ini, History, Next Backup Number, 1
@@ -37,6 +79,7 @@ Else
 	sExts:= "*;"
 	IniWrite, %sPath%, STB_settings.ini, Paths, Files Location
 	IniWrite, %sDest%, STB_settings.ini, Paths, Backups Location
+    IniWrite, %sCustomDest%, STB_settings.ini, History, Last Manual Backup Location
 	IniWrite, %tInterval%, STB_settings.ini, Option, Backup Interval 
 	IniWrite, %iBackupCount%, STB_settings.ini, Option, Backups Count 
 	IniWrite, %iBkupNum%, STB_settings.ini, History, Next Backup Number
@@ -61,6 +104,7 @@ Gui, +CAPTION
 GUI, -MaximizeBox
 Gui, Margin, 0, 0
 Gui,Font, 
+Gui, Add, GroupBox, x8 y4 w484 h484, 
 Gui,Add,Edit,x125 y56 w250 h22 %black%  ReadOnly vSLedit,
 GuiControl,, SLedit, %sPath%
 Gui,Add,Edit,x125 y128 w250 h22 %black% ReadOnly vBLedit,
@@ -77,14 +121,14 @@ Gui,Add,UpDown, 0x20 Range1-720 ,%mInterval%,vBIud
 Gui,Add,Edit,x126 y250 w38 h18 %black% Number ReadOnly vBCedit gBCedit
 Gui,Add,UpDown,x146 y275 w18 h18 0x20 Range1-100,%iBackupCount%,vBCud
 Gui,Font,s10 Normal ,tahoma
-Gui,Add,Button,x80 y400 w112 h40 vcenter center vACvar gACbtn,Activate
-Gui,Add,Button,x308 y400 w112 h40 +Disabled vDEvar gDEbtn,Deactivate 
+Gui,Add,Button,x80 y410 w110 h40 center vACvar gACbtn,Activate
+Gui,Add,Button,x302 y410 w110 h40 +Disabled vDEvar gDEbtn,Deactivate 
 Gui,Font,s8 Normal ,tahoma
 Gui,Add,Text,x44 y200 w70 h13 %black% left ,Backup every:
 Gui,Add,Text,x44 y250 w80 h13 %black% left  ,Backups count:
 Gui,Add,Text,x170 y200 w40 h25 %black% ,minutes
 Gui,Font,Normal s14  Bold ,Segoe UI
-Gui,Add,Text,x30 y320 w200 h50 Center %red% vNotetext,%sBackupf%
+Gui,Add,Text,x30 y338 w200 h50 Center %red% vNotetext,%sBackupf%
 Gui,Font,Normal s12 %black%,Tahoma
 Gui,Add,Edit,x265 y200 w185 h103 %black% r4 1024 Lowercase Multi Border readonly 64 vextsediVar gextsEdit,%sExts%
 Gui,Font,Normal s9 %black%
@@ -92,6 +136,9 @@ Gui,Add,Text,x268 y175 w140 h20 %black% -Wrap,File extensions to backup:
 Gui,Add,Button,x335 y290 w45 h25  vEDbtnvar gextsEDbtn,Edit
 Gui,Add,Button,x270 y290 w45 h25 disabled vEDbtnokvar gextsEDokbtn,Ok
 Gui,Add,Button,x400 y290 w45 h25 disabled vEDbtncancelvar gextsEDcancelbtn,Cancel
+Gui, Add, Button, x322 y338 w70 h40 center +Disabled vBKvar gBKbtn , Manual Backup
+If sPath !=
+GuiControl, Enabled, BKvar
 ;Gui,Add,Checkbox,x268 y320 w100 h20 %black% vFLCOPYcbxVar gFLCOPYcbx,Checkbox
 Gui,Show,x390 y122 w500 h500 ,Simple Timed Backup
 Return
@@ -156,7 +203,10 @@ extsEDokbtn:
 SPbtn:
 {
 	FileSelectFolder,OutputVar1 , , 0
+    if OutputVar1 =
+        return
 	GuiControl,, SLedit, %OutputVar1%
+    GuiControl, Enabled, BKvar
 	sPath := OutputVar1
 	IniWrite, %sPath%, STB_settings.ini, Paths, Files Location
 	Return
@@ -164,6 +214,8 @@ SPbtn:
 BPbtn:
 {
 	FileSelectFolder,OutputVar2 , , 3
+    if OutputVar2 =
+        return
 	GuiControl,, BLedit, %OutputVar2%
 	sDest := OutputVar2
 	IniWrite, %sDest%, STB_settings.ini, Paths, Backups Location
@@ -689,6 +741,87 @@ backup:
 	}
 	Return
 }
+
+BKbtn:
+{
+    sCVar :=InStr(FileExist(sCustomDest),"D")
+    If (sCVar!=0)
+        FileSelectFolder,OutputVar3 ,*%sCustomDest% , 3
+    Else
+        FileSelectFolder,OutputVar3 ,*%sDest% , 3
+    if OutputVar3 =
+        return
+    GuiControlGet, sPath,, SLedit
+    GuiControlGet, Extstring ,, extsediVar, 
+    StringReplace, Extstring,Extstring,`n,,All
+    StringReplace, Extstring, Extstring,%A_SPACE%,, All
+    StringReplace, Extstring, Extstring,%A_Tab%,, All
+    StringReplace, Extstring, Extstring,/,, All
+    StringReplace, Extstring, Extstring,\,, All
+    StringReplace, Extstring, Extstring,:,, All
+    StringReplace, Extstring, Extstring,|,, All
+    StringReplace, Extstring, Extstring,",, All
+    StringReplace, Extstring, Extstring,<,, All
+    StringReplace, Extstring, Extstring,>,, All
+    StringReplace, Extstring, Extstring,`,,, All
+    sExts := Extstring
+    stringSplit, ExtArr, Extstring ,`;,
+    PathPattern := spath
+    sPVar :=InStr(FileExist(PathPattern),"D")
+    If (sPVar=0)
+    {
+        msgbox,The foldername you entered could not be found: %sPath%
+        return
+    }
+    sDVar :=InStr(FileExist(OutputVar3),"D")
+    If (sDVar=0)
+    {
+        FileCreateDir, %OutputVar3%
+        erl:=ErrorLevel
+        if(erl<>0)
+        {
+            msgbox,The foldername you entered could not be created: %OutputVar3%
+            return
+        }
+    }
+    bCopyallExts:=false
+    loop, %ExtArr0%
+    {
+        if(ExtArr%A_Index%="*")
+        {
+            bCopyallExts:=true
+            Break
+        }
+    }
+    FormatTime, sNow, %a_now%, [yyyy-MM-dd_hh-mm-ss]
+    sBackupPath = %OutputVar3%\STBackup%sNow%
+    FileCreateDir, %sBackupPath%
+    erl:=ErrorLevel
+    if(erl<>0)
+    {
+        msgbox,backup could not be created inside the seleted folder: %OutputVar3%
+        return
+    }
+	if(bCopyallExts = false)
+	{
+		loop, %ExtArr0%
+		{
+			if(ExtArr%A_Index% <> "")
+			{
+				tempExt1:=ExtArr%A_Index%
+				FileCopy, %sPath%\*.%tempExt1%, %sBackupPath%\, 1
+			}
+		}
+	}
+	else If ( bCopyallExts = True)
+	{
+		FileCopy, %sPath%\*.*, %sBackupPath%\, 1
+	}
+    sCustomDest := OutputVar3
+    IniWrite, %sCustomDest%, STB_settings.ini, History, Last Manual Backup Location
+    return
+}
+
 ExitSub:
 {
 	if A_ExitReason not in Logoff,Shutdown  

@@ -210,7 +210,7 @@ extsEDokbtn:
 
 SPbtn:
 {
-	FileSelectFolder,OutputVar1 , , 0, Files location
+	FileSelectFolder,OutputVar1 ,*%sPath% , 0, Files location
 	if OutputVar1 =
 	return
 	GuiControl,, SLedit, %OutputVar1%
@@ -222,9 +222,11 @@ SPbtn:
 
 BPbtn:
 {
-	FileSelectFolder,OutputVar2 , , 3, Backups location
+	FileSelectFolder,OutputVar2 ,*%sDest% , 3, Backups location
 	if OutputVar2 =
 	return
+    if (OutputVar2 = sDest)
+        return
 	FileCreateDir, %OutputVar2%\ST_Backups
 	OutputVar2 .= "\ST_Backups"
 	GuiControl,, BLedit, %OutputVar2%

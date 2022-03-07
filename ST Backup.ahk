@@ -25,6 +25,12 @@ lightgrey:="bad8cf"
 lightgreen:="d0e970"
 bZipBackup := 0
 
+IsEmpty(Dir){
+   Loop %Dir%\*.*, 0, 1
+      return 0
+   return 1
+}
+
 Zip(sDir, sZip)
 {
 	If Not FileExist(sZip)
@@ -67,8 +73,17 @@ Unz(sZip, sUnz)
 
 zipBackup(sPath)
 {
+    if InStr(FileExist(sPath), "D") {
+        if IsEmpty(sPath) {
+            return
+        }
+    }
+    else {
+        return
+    }
 	SplitPath, sPath, sName, sParent
 	FileDelete, %sParent%\%sName%.zip
+    FileDelete, %sPath%\%sName%.zip
 	Zip(sPath , sParent "\" sName ".zip")
 	FileRemoveDir, %sPath%, 1
 	FileCreateDir, %sPath%
@@ -190,11 +205,12 @@ extsEDokbtn:
 	StringReplace, Extstring,Extstring,`n,,All
 	StringReplace, Extstring, Extstring,%A_SPACE%,, All
 	StringReplace, Extstring, Extstring,%A_Tab%,, All
+    StringReplace, Extstring, Extstring,.,, All
 	StringReplace, Extstring, Extstring,/,, All
 	StringReplace, Extstring, Extstring,\,, All
 	StringReplace, Extstring, Extstring,:,, All
 	StringReplace, Extstring, Extstring,|,, All
-	StringReplace, Extstring, Extstring,",, All ;"this line break notpad++ Syntax Highlighting
+	StringReplace, Extstring, Extstring,",, All ;"this line breaks notpad++ Syntax Highlighting
 	StringReplace, Extstring, Extstring,<,, All
 	StringReplace, Extstring, Extstring,>,, All
 	StringReplace, Extstring, Extstring,`,,, All
@@ -274,11 +290,12 @@ extsEdit:
 	StringReplace,Extstring,Extstring,`n,,All
 	StringReplace, Extstring, Extstring,%A_SPACE%,, All
 	StringReplace, Extstring, Extstring,%A_Tab%,, All
+    StringReplace, Extstring, Extstring,.,, All
 	StringReplace, Extstring, Extstring,/,, All
 	StringReplace, Extstring, Extstring,\,, All
 	StringReplace, Extstring, Extstring,:,, All
 	StringReplace, Extstring, Extstring,|,, All
-	StringReplace, Extstring, Extstring,",, All ;"this line break notpad++ Syntax Highlighting
+	StringReplace, Extstring, Extstring,",, All ;"this line breaks notpad++ Syntax Highlighting
 	StringReplace, Extstring, Extstring,<,, All
 	StringReplace, Extstring, Extstring,>,, All
 	StringReplace, Extstring, Extstring,`,,, All
@@ -308,11 +325,12 @@ ACbtn:
 	StringReplace, Extstring,Extstring,`n,,All
 	StringReplace, Extstring, Extstring,%A_SPACE%,, All
 	StringReplace, Extstring, Extstring,%A_Tab%,, All
+    StringReplace, Extstring, Extstring,.,, All
 	StringReplace, Extstring, Extstring,/,, All
 	StringReplace, Extstring, Extstring,\,, All
 	StringReplace, Extstring, Extstring,:,, All
 	StringReplace, Extstring, Extstring,|,, All
-	StringReplace, Extstring, Extstring,",, All ;"this line break notpad++ Syntax Highlighting
+	StringReplace, Extstring, Extstring,",, All ;"this line breaks notpad++ Syntax Highlighting
 	StringReplace, Extstring, Extstring,<,, All
 	StringReplace, Extstring, Extstring,>,, All
 	StringReplace, Extstring, Extstring,`,,, All
@@ -731,11 +749,12 @@ BKbtn:
 	StringReplace, Extstring,Extstring,`n,,All
 	StringReplace, Extstring, Extstring,%A_SPACE%,, All
 	StringReplace, Extstring, Extstring,%A_Tab%,, All
+    StringReplace, Extstring, Extstring,.,, All
 	StringReplace, Extstring, Extstring,/,, All
 	StringReplace, Extstring, Extstring,\,, All
 	StringReplace, Extstring, Extstring,:,, All
 	StringReplace, Extstring, Extstring,|,, All
-	StringReplace, Extstring, Extstring,",, All ;"this line break notpad++ Syntax Highlighting
+	StringReplace, Extstring, Extstring,",, All ;"this line breaks notpad++ Syntax Highlighting
 	StringReplace, Extstring, Extstring,<,, All
 	StringReplace, Extstring, Extstring,>,, All
 	StringReplace, Extstring, Extstring,`,,, All
@@ -809,11 +828,12 @@ ExitSub:
 		StringReplace, Extstring,Extstring,`n,,All
 		StringReplace, Extstring, Extstring,%A_SPACE%,, All
 		StringReplace, Extstring, Extstring,%A_Tab%,, All
+        StringReplace, Extstring, Extstring,.,, All
 		StringReplace, Extstring, Extstring,/,, All
 		StringReplace, Extstring, Extstring,\,, All
 		StringReplace, Extstring, Extstring,:,, All
 		StringReplace, Extstring, Extstring,|,, All
-		StringReplace, Extstring, Extstring,",, All ;"this line break notpad++ Syntax Highlighting
+		StringReplace, Extstring, Extstring,",, All ;"this line breaks notpad++ Syntax Highlighting
 		StringReplace, Extstring, Extstring,<,, All
 		StringReplace, Extstring, Extstring,>,, All
 		StringReplace, Extstring, Extstring,`,,, All

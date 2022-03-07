@@ -23,82 +23,84 @@ red:="c0xe1256b"
 blue:="c0x056bed"
 lightgrey:="bad8cf"
 lightgreen:="d0e970"
+bZipBackup := 0
 
 Zip(sDir, sZip)
 {
-   If Not FileExist(sZip)
-   {
-    Header1 := "PK" . Chr(5) . Chr(6)
-    VarSetCapacity(Header2, 18, 0)
-    file := FileOpen(sZip,"w")
-    file.Write(Header1)
-    file.RawWrite(Header2,18)
-    file.close()
-   }
-    psh := ComObjCreate( "Shell.Application" )
-    pzip := psh.Namespace( sZip )
-    pzip.CopyHere( sDir, 4|16 )
-    Loop {
-        sleep 100
-        zippedItems := pzip.Items().count
-        ToolTip Zipping in progress..
-    } Until zippedItems=1 ;because sDir is just one file or folder
-    ToolTip
+	If Not FileExist(sZip)
+	{
+		Header1 := "PK" . Chr(5) . Chr(6)
+		VarSetCapacity(Header2, 18, 0)
+		file := FileOpen(sZip,"w")
+		file.Write(Header1)
+		file.RawWrite(Header2,18)
+		file.close()
+	}
+	psh := ComObjCreate( "Shell.Application" )
+	pzip := psh.Namespace( sZip )
+	pzip.CopyHere( sDir, 4|16 )
+	Loop {
+		sleep 100
+		zippedItems := pzip.Items().count
+		;ToolTip Zipping in progress..
+	} Until zippedItems=1 ;because sDir is just one file or folder
+	;ToolTip
 }
 
 Unz(sZip, sUnz)
 {
-    fso := ComObjCreate("Scripting.FileSystemObject")
-    If Not fso.FolderExists(sUnz)  ;http://www.autohotkey.com/forum/viewtopic.php?p=402574
-       fso.CreateFolder(sUnz)
-    psh  := ComObjCreate("Shell.Application")
-    zippedItems := psh.Namespace( sZip ).items().count
-    psh.Namespace( sUnz ).CopyHere( psh.Namespace( sZip ).items, 4|16 )
-    Loop {
-        sleep 100
-        unzippedItems := psh.Namespace( sUnz ).items().count
-        ToolTip Unzipping in progress..
-        IfEqual,zippedItems,%unzippedItems%
-            break
-    }
-    ToolTip
+	fso := ComObjCreate("Scripting.FileSystemObject")
+	If Not fso.FolderExists(sUnz)
+	fso.CreateFolder(sUnz)
+	psh  := ComObjCreate("Shell.Application")
+	zippedItems := psh.Namespace( sZip ).items().count
+	psh.Namespace( sUnz ).CopyHere( psh.Namespace( sZip ).items, 4|16 )
+	Loop {
+		sleep 100
+		unzippedItems := psh.Namespace( sUnz ).items().count
+		;ToolTip Unzipping in progress..
+		IfEqual,zippedItems,%unzippedItems%
+			break
+	}
+	;ToolTip
+}
+
+zipBackup(sPath)
+{
+	SplitPath, sPath, sName, sParent
+	FileDelete, %sParent%\%sName%.zip
+	Zip(sPath , sParent "\" sName ".zip")
+	FileRemoveDir, %sPath%, 1
+	FileCreateDir, %sPath%
+	FileMove, %sParent%\%sName%.zip,%sPath%,1
 }
 
 if (FileExist("STB_settings.ini"))
-{   
+{
 	IniRead, sPath, STB_settings.ini, Paths, Files Location 
 	IniRead, sDest, STB_settings.ini, Paths, Backups Location
-    IniRead, sCustomDest, STB_settings.ini, History, Last Manual Backup Location
+	IniRead, sCustomDest, STB_settings.ini, History, Last Manual Backup Location
 	IniRead, tInterval, STB_settings.ini, Option, Backup Interval , 300000 
 	IniRead, iBackupCount, STB_settings.ini, Option, Backups Count , 10
 	IniRead, iBkupNum, STB_settings.ini, History, Next Backup Number, 1
 	IniRead, sExts, STB_settings.ini, Option , Extensions, "*;"
-}
-Else
-{
+	IniRead, bZipBackup, STB_settings.ini, Option, Zip Backups , 0
+}else  {
 	sExts:= "*;"
 	IniWrite, %sPath%, STB_settings.ini, Paths, Files Location
 	IniWrite, %sDest%, STB_settings.ini, Paths, Backups Location
-    IniWrite, %sCustomDest%, STB_settings.ini, History, Last Manual Backup Location
+	IniWrite, %sCustomDest%, STB_settings.ini, History, Last Manual Backup Location
 	IniWrite, %tInterval%, STB_settings.ini, Option, Backup Interval 
 	IniWrite, %iBackupCount%, STB_settings.ini, Option, Backups Count 
 	IniWrite, %iBkupNum%, STB_settings.ini, History, Next Backup Number
-	IniWrite, %sExts%, STB_settings.ini, Option , Extensions
+	IniWrite, %sExts%, STB_settings.ini, Option, Extensions
+	IniWrite, %bZipBackup%, STB_settings.ini, Option, Zip Backups
 }
-fa := DllCall("LoadKeyboardLayout", "Str", "00000429", "Int", 1)
-en := DllCall("LoadKeyboardLayout", "Str", "00000409", "Int", 1)
-w := DllCall("GetForegroundWindow")
-pid := DllCall("GetWindowThreadProcessId", "UInt", w, "Ptr", 0)
-l := DllCall("GetKeyboardLayout", "UInt", pid)
-if (l != en) 
-{
-    PostMessage 0x50, 0, %fa%,, A
-}
+
 Hotkey, ^!x, ExitSub
 OnExit, ExitSub
 Gui, +LastFound
 WinSet, Transparent, 254
-;Gui, Color, %maincolor%
 GUI, -ToolWindow
 Gui, +CAPTION
 GUI, -MaximizeBox
@@ -137,11 +139,20 @@ Gui,Add,Button,x335 y290 w45 h25  vEDbtnvar gextsEDbtn,Edit
 Gui,Add,Button,x270 y290 w45 h25 disabled vEDbtnokvar gextsEDokbtn,Ok
 Gui,Add,Button,x400 y290 w45 h25 disabled vEDbtncancelvar gextsEDcancelbtn,Cancel
 Gui, Add, Button, x322 y338 w70 h40 center +Disabled vBKvar gBKbtn , Manual Backup
-If sPath !=
+
+if sPath !=
 GuiControl, Enabled, BKvar
-;Gui,Add,Checkbox,x268 y320 w100 h20 %black% vFLCOPYcbxVar gFLCOPYcbx,Checkbox
+
+Gui,Add,Checkbox,x44 y300 w100 h20 %black% -Wrap vZipBackupvar gZipBackupcbx,Zip backups?
+
+if (bZipBackup = 1)
+	GuiControl,, ZipBackupvar, 1
+else
+	GuiControl,, ZipBackupvar, 0
+
 Gui,Show,x390 y122 w500 h500 ,Simple Timed Backup
 Return
+
 extsEDcancelbtn:
 {
 	GuiControl,,extsediVar, %sExts%
@@ -152,12 +163,9 @@ extsEDcancelbtn:
 	bIsEDExtsenabled := bIsEDExtsenabled * -1
 	Return
 }
-
-FLCOPYcbx:
-Return
-
+	
 extsEDbtn:
-{ 
+{
 	if(bIsEDExtsenabled = -1)
 	{
 		GuiControl, -ReadOnly, extsediVar
@@ -166,9 +174,7 @@ extsEDbtn:
 		GuiControl, Disabled, EDbtnvar
 		bIsEDExtsenabled := bIsEDExtsenabled * -1
 		return
-	}
-	else
-	{
+	}else  {
 		GuiControl, +ReadOnly, extsediVar
 		GuiControl, Disabled, EDbtncancelvar
 		GuiControl, Disabled, EDbtnokvar
@@ -177,6 +183,7 @@ extsEDbtn:
 		return
 	}
 }
+
 extsEDokbtn:
 {
 	GuiControlGet, Extstring ,, extsediVar, 
@@ -187,7 +194,7 @@ extsEDokbtn:
 	StringReplace, Extstring, Extstring,\,, All
 	StringReplace, Extstring, Extstring,:,, All
 	StringReplace, Extstring, Extstring,|,, All
-	StringReplace, Extstring, Extstring,",, All
+	StringReplace, Extstring, Extstring,",, All ;"this line break notpad++ Syntax Highlighting
 	StringReplace, Extstring, Extstring,<,, All
 	StringReplace, Extstring, Extstring,>,, All
 	StringReplace, Extstring, Extstring,`,,, All
@@ -200,27 +207,30 @@ extsEDokbtn:
 	bIsEDExtsenabled := bIsEDExtsenabled * -1
 	Return
 }
+
 SPbtn:
 {
-	FileSelectFolder,OutputVar1 , , 0
-    if OutputVar1 =
-        return
+	FileSelectFolder,OutputVar1 , , 0, Files location
+	if OutputVar1 =
+	return
 	GuiControl,, SLedit, %OutputVar1%
-    GuiControl, Enabled, BKvar
+	GuiControl, Enabled, BKvar
 	sPath := OutputVar1
 	IniWrite, %sPath%, STB_settings.ini, Paths, Files Location
 	Return
 }
+
 BPbtn:
 {
-	FileSelectFolder,OutputVar2 , , 3
-    if OutputVar2 =
-        return
+	FileSelectFolder,OutputVar2 , , 3, Backups location
+	if OutputVar2 =
+	return
 	GuiControl,, BLedit, %OutputVar2%
 	sDest := OutputVar2
 	IniWrite, %sDest%, STB_settings.ini, Paths, Backups Location
-	Return	
+	Return
 }
+
 BIedit:
 {
 	GuiControlGet , BIedit
@@ -228,6 +238,7 @@ BIedit:
 	IniWrite, %tInterval%, STB_settings.ini, Option, Backup Interval 
 	Return
 }
+
 BCedit:
 {
 	GuiControlGet , BCedit
@@ -235,6 +246,7 @@ BCedit:
 	IniWrite, %iBackupCount%, STB_settings.ini, Option, Backups Count
 	Return
 }
+	
 BCud:
 {
 	GuiControlGet , BCud
@@ -242,6 +254,7 @@ BCud:
 	IniWrite, %iBackupCount%, STB_settings.ini, Option, Backups Count
 	Return
 }
+
 BIud:
 {
 	GuiControlGet , BIud
@@ -249,6 +262,7 @@ BIud:
 	IniWrite, %tInterval%, STB_settings.ini, Option, Backups Interval 
 	Return
 }
+
 extsEdit:
 {
 	ExtArr := Object()
@@ -260,16 +274,24 @@ extsEdit:
 	StringReplace, Extstring, Extstring,\,, All
 	StringReplace, Extstring, Extstring,:,, All
 	StringReplace, Extstring, Extstring,|,, All
-	StringReplace, Extstring, Extstring,",, All
+	StringReplace, Extstring, Extstring,",, All ;"this line break notpad++ Syntax Highlighting
 	StringReplace, Extstring, Extstring,<,, All
 	StringReplace, Extstring, Extstring,>,, All
 	StringReplace, Extstring, Extstring,`,,, All
 	StringSplit, ExtArr, Extstring ,`;,`n
+	Return
 }
-Return
+	
+ZipBackupcbx:
+{
+	bZipBackup := !bZipBackup
+	IniWrite, %bZipBackup%, STB_settings.ini, Option, Zip Backups
+	Return
+}
+	
 ACbtn:
 {
-	if(bIsEDExtsenabled := 1)
+	if(bIsEDExtsenabled = 1)
 	{
 		GuiControl,,extsediVar, %sExts%
 	}	
@@ -286,7 +308,7 @@ ACbtn:
 	StringReplace, Extstring, Extstring,\,, All
 	StringReplace, Extstring, Extstring,:,, All
 	StringReplace, Extstring, Extstring,|,, All
-	StringReplace, Extstring, Extstring,",, All
+	StringReplace, Extstring, Extstring,",, All ;"this line break notpad++ Syntax Highlighting
 	StringReplace, Extstring, Extstring,<,, All
 	StringReplace, Extstring, Extstring,>,, All
 	StringReplace, Extstring, Extstring,`,,, All
@@ -298,13 +320,11 @@ ACbtn:
 	{
 		tInterval := 300000
 		GuiControl, , BIud,%tInterval%
-	}
-	Else If (iBackupCount="")
-	{
+	}else   If (iBackupCount="")
+	 {
 		iBackupCount := 10
-	}
-	Else If (sPVar=0)
-	{
+	}else   If (sPVar=0)
+	 {
 		msgbox,The foldername you entered could not be found: %sPath%
 		return
 	}
@@ -317,9 +337,7 @@ ACbtn:
 	{
 		msgbox,Your Backup Count is not within the valid range: 1-100
 		return
-	}
-	Else
-	{
+	}else  {
 		If (sPath=sDest)
 		{
 			sDest.="\Backups"
@@ -363,9 +381,7 @@ ACbtn:
 		if(iBkupNum="")
 		{
 			iBkupNum := 1
-		}
-		else
-		{
+		}else  {
 			if iBkupNum not between 1 and %iBackupCount%
 			iBkupNum := 1
 		}
@@ -408,47 +424,36 @@ ACbtn:
 								FileDelete, %sLogfullpath%
 								FileAppend ,%sNow% backup started..., %sLogfullpath%
 								FileAppend ,`n%sNow% autobackup created `, extension:%xttemp% `, source:%sPath%\ `, destination:%sDest%\Backup_0\, %sLogfullpath%
-							}
-							else
-							{
+							}else  {
 								FileAppend ,`n%sNow% backup started..., %sLogfullpath%
 								FileAppend ,`n%sNow% autobackup created `, extension:%xttemp% `, source:%sPath%\ `, destination:%sDest%\Backup_0\, %sLogfullpath%
 							}
-						}
-						else
-						{
+						}else  {
 							FileAppend ,%sNow% backup started..., %sLogfullpath%
 							FileAppend ,`n%sNow% autobackup created `, extension:%xttemp% `, source:%sPath%\ `, destination:%sDest%\Backup_0\, %sLogfullpath%
 						}
 						FileDelete, %sDest%\Backup_0\log.txt
 						FormatTime, sCurrentTime ,  dddd MMMM d yyyy hh:mm:ss tt
 						FileAppend ,*.%xttemp% autoBackup Created in %sCurrentTime%,%sDest%\Backup_0\log.txt
-					}
-					Else
-					{
+					}else  {
 						FormatTime, sNow, %a_now%, [yyyy-MM-dd%a_space%hh:mm:ss]
 						xttemp:=ExtArr%A_Index%
 						if FileExist(sLogfullpath)
 						{
 							FileAppend ,`n%sNow% warning! `, extension:%xttemp% `, source:%sPath%\ `, destination:%sDest%\Backup_0\, %sLogfullpath%
 							FileAppend ,`n%sNow% can`t copy %ErrorCount% file(s)!
-						}
-						else
-						{
+						}else  {
 							FileAppend ,%sNow% warning! `, extension:%xttemp% `, source:%sPath%\ `, destination:%sDest%\Backup_0\, %sLogfullpath%
 							FileAppend ,`n%sNow% can`t copy %ErrorCount% file(s)!
 						}
 					}
 				}
 			}
-		}
-		Else 
-		{
+		}else  {
 			FileCopy, %sPath%\*.*, %sDest%\Backup_0\, 1
 			ErrorCount := ErrorLevel
 			If (ErrorCount = 0)
 			{
-
 				FileDelete, %sDest%\Backup_0\log.txt
 				FormatTime, sNow, %a_now%, [yyyy-MM-dd%a_space%hh:mm:ss]
 				FormatTime, sCurrentTime ,  dddd MMMM d yyyy hh:mm:ss tt
@@ -460,166 +465,148 @@ ACbtn:
 						FileDelete, %sLogfullpath%
 						FileAppend ,%sNow% backup started..., %sLogfullpath%
 						FileAppend ,`n%sNow% autobackup created `, extension:* `, source:%sPath%\ `, destination:%sDest%\Backup_0\, %sLogfullpath%
-					}
-					else
-					{
+					}else  {
 						FileAppend ,`n%sNow% backup started..., %sLogfullpath%
 						FileAppend ,`n%sNow% autobackup created `, extension* `, source:%sPath%\ `, destination:%sDest%\Backup_0\, %sLogfullpath%
 					}
-				}
-				else
-				{
+				}else  {
 					FileAppend ,%sNow% backup started..., %sLogfullpath%
 					FileAppend ,`n%sNow% autobackup created `, extension:* `, source:%sPath%\ `, destination:%sDest%\Backup_0\, %sLogfullpath%
 				}
 				FileAppend ,*.* autoBackup Created in %sCurrentTime%,%sDest%\Backup_0\log.txt
-			}
-			else
-			{
+			}else  {
 				FormatTime, sNow, %a_now%, [yyyy-MM-dd%a_space%hh:mm:ss]
 				if FileExist(sLogfullpath)
 				{
 					FileAppend ,`n%sNow% warning! `, extension:* `, source:%sPath%\ `, destination:%sDest%\Backup_0\, %sLogfullpath%
 					FileAppend ,`n%sNow% can`t copy %ErrorCount% file(s)!
-				}
-				else 
-				{
+				}else  {
 					FileAppend ,%sNow% warning! `, extension:* `, source:%sPath%\ `, destination:%sDest%\Backup_0\, %sLogfullpath%
 					FileAppend ,`n%sNow% can`t copy %ErrorCount% file(s)!
 				}
 			}
 		}
+		If (bZipBackup = 1)
+			zipBackup(sDest "\Backup_0")
 		Gosub, ToggleBackup
 	}
 	Return
 }
+
 DEbtn:
-GuiControl,Disable,DEvar
-GuiControl,Enable,ACvar
-GuiControl,Enable,SPvar
-GuiControl,Enable,BPvar
-GuiControl,Enable,BCedit
-GuiControl,Enable,BIedit
-GuiControl,Enable,SLedit
-GuiControl,Enable,BLedit
-if(bIsEDExtsenabled = -1)
 {
-	GuiControl,Enable,EDbtnvar
-}
-else
-{
-	GuiControl, Enable, EDbtncancelvar
-	GuiControl, Enable, EDbtnokvar
-}
-GuiControl,,Notetext,%sBackupf%
-Gui,Font,Normal s14 Bold %red% ,Segoe UI
-GuiControl, Font, Notetext 
-if(bCopyallExts=false)
-{
-	loop, %ExtArr0%
+	GuiControl,Disable,DEvar
+	GuiControl,Enable,ACvar
+	GuiControl,Enable,SPvar
+	GuiControl,Enable,BPvar
+	GuiControl,Enable,BCedit
+	GuiControl,Enable,BIedit
+	GuiControl,Enable,SLedit
+	GuiControl,Enable,BLedit
+	if(bIsEDExtsenabled = -1)
 	{
-		if(ExtArr%A_Index%<>"")
+		GuiControl,Enable,EDbtnvar
+	}else  {
+		GuiControl, Enable, EDbtncancelvar
+		GuiControl, Enable, EDbtnokvar
+	}
+	GuiControl,,Notetext,%sBackupf%
+	Gui,Font,Normal s14 Bold %red% ,Segoe UI
+	GuiControl, Font, Notetext 
+	if(bCopyallExts=false)
+	{
+		loop, %ExtArr0%
 		{
-			tempExt:=ExtArr%A_Index%
-			FileCopy, %sPath%\*.%tempExt%, %sDest%\Backup_0\, 1
-			ErrorCount := ErrorLevel
-			If (ErrorCount = 0)
+			if(ExtArr%A_Index%<>"")
 			{
-				FormatTime, sNow, %a_now%, [yyyy-MM-dd%a_space%hh:mm:ss]
-				xttemp:=ExtArr%A_Index%
-				if FileExist(sLogfullpath)
+				tempExt:=ExtArr%A_Index%
+				FileCopy, %sPath%\*.%tempExt%, %sDest%\Backup_0\, 1
+				ErrorCount := ErrorLevel
+				If (ErrorCount = 0)
 				{
-					FileGetSize, logsizekb, %sLogfullpath%, K
-					if(logsizekb>500)
+					FormatTime, sNow, %a_now%, [yyyy-MM-dd%a_space%hh:mm:ss]
+					xttemp:=ExtArr%A_Index%
+					if FileExist(sLogfullpath)
 					{
-						FileDelete, %sLogfullpath%
+						FileGetSize, logsizekb, %sLogfullpath%, K
+						if(logsizekb>500)
+						{
+							FileDelete, %sLogfullpath%
+							FileAppend ,%sNow% backup stopped..., %sLogfullpath%
+							FileAppend ,`n%sNow% autobackup created `, extension:%xttemp% `, source:%sPath%\ `, destination:%sDest%\Backup_0\, %sLogfullpath%
+						}else  {
+							FileAppend ,`n%sNow% backup stopped..., %sLogfullpath%
+							FileAppend ,`n%sNow% autobackup created `, extension:%xttemp% `, source:%sPath%\ `, destination:%sDest%\Backup_0\, %sLogfullpath%
+						}
+					}else  {
 						FileAppend ,%sNow% backup stopped..., %sLogfullpath%
 						FileAppend ,`n%sNow% autobackup created `, extension:%xttemp% `, source:%sPath%\ `, destination:%sDest%\Backup_0\, %sLogfullpath%
 					}
-					else
+					FileDelete, %sDest%\Backup_0\log.txt
+					FormatTime, sCurrentTime ,  dddd MMMM d yyyy hh:mm:ss tt
+					FileAppend ,*.%xttemp% autoBackup Created in %sCurrentTime%,%sDest%\Backup_0\log.txt
+				}else  {
+					FormatTime, sNow, %a_now%, [yyyy-MM-dd%a_space%hh:mm:ss]
+					if FileExist(sLogfullpath)
 					{
-						FileAppend ,`n%sNow% backup stopped..., %sLogfullpath%
-						FileAppend ,`n%sNow% autobackup created `, extension:%xttemp% `, source:%sPath%\ `, destination:%sDest%\Backup_0\, %sLogfullpath%
+						FileAppend ,`n%sNow% warning! `, extension:%xttemp% `, source:%sPath%\ `, destination:%sDest%\Backup_0\, %sLogfullpath%
+						FileAppend ,`n%sNow% can`t copy %ErrorCount% file(s)!
+					}else  {
+						FileAppend ,%sNow% warning! `, extension:%xttemp% `, source:%sPath%\ `, destination:%sDest%\Backup_0\, %sLogfullpath%
+						FileAppend ,`n%sNow% can`t copy %ErrorCount% file(s)!
 					}
-				}
-				else
-				{
-					FileAppend ,%sNow% backup stopped..., %sLogfullpath%
-					FileAppend ,`n%sNow% autobackup created `, extension:%xttemp% `, source:%sPath%\ `, destination:%sDest%\Backup_0\, %sLogfullpath%
-				}
-				FileDelete, %sDest%\Backup_0\log.txt
-				FormatTime, sCurrentTime ,  dddd MMMM d yyyy hh:mm:ss tt
-				FileAppend ,*.%xttemp% autoBackup Created in %sCurrentTime%,%sDest%\Backup_0\log.txt
-			}
-			else
-			{
-				FormatTime, sNow, %a_now%, [yyyy-MM-dd%a_space%hh:mm:ss]
-				if FileExist(sLogfullpath)
-				{
-					FileAppend ,`n%sNow% warning! `, extension:%xttemp% `, source:%sPath%\ `, destination:%sDest%\Backup_0\, %sLogfullpath%
-					FileAppend ,`n%sNow% can`t copy %ErrorCount% file(s)!
-				}
-				else 
-				{
-					FileAppend ,%sNow% warning! `, extension:%xttemp% `, source:%sPath%\ `, destination:%sDest%\Backup_0\, %sLogfullpath%
-					FileAppend ,`n%sNow% can`t copy %ErrorCount% file(s)!
 				}
 			}
 		}
-	}
-}
-Else 
-{
-	FileCopy, %sPath%\*.*, %sDest%\Backup_0\, 1
-	ErrorCount := ErrorLevel
-	If (ErrorCount = 0)
-	{
-
-		FileDelete, %sDest%\Backup_0\log.txt
-		FormatTime, sNow, %a_now%, [yyyy-MM-dd%a_space%hh:mm:ss]
-		FormatTime, sCurrentTime ,  dddd MMMM d yyyy hh:mm:ss tt
-		if FileExist(sLogfullpath)
+	}else  {
+		FileCopy, %sPath%\*.*, %sDest%\Backup_0\, 1
+		ErrorCount := ErrorLevel
+		If (ErrorCount = 0)
 		{
-			FileGetSize, logsizekb, %sLogfullpath%, K
-			if(logsizekb>500)
+			FileDelete, %sDest%\Backup_0\log.txt
+			FormatTime, sNow, %a_now%, [yyyy-MM-dd%a_space%hh:mm:ss]
+			FormatTime, sCurrentTime ,  dddd MMMM d yyyy hh:mm:ss tt
+			if FileExist(sLogfullpath)
 			{
-				FileDelete, %sLogfullpath%
+				FileGetSize, logsizekb, %sLogfullpath%, K
+				if(logsizekb>500)
+				{
+					FileDelete, %sLogfullpath%
+					FileAppend ,%sNow% backup stopped..., %sLogfullpath%
+					FileAppend ,`n%sNow% autobackup created `, extension:* `, source:%sPath%\ `, destination:%sDest%\Backup_0\, %sLogfullpath%
+				}else  {
+					FileAppend ,`n%sNow% backup stopped..., %sLogfullpath%
+					FileAppend ,`n%sNow% autobackup created `, extension* `, source:%sPath%\ `, destination:%sDest%\Backup_0\, %sLogfullpath%
+				}
+			}else  {
 				FileAppend ,%sNow% backup stopped..., %sLogfullpath%
 				FileAppend ,`n%sNow% autobackup created `, extension:* `, source:%sPath%\ `, destination:%sDest%\Backup_0\, %sLogfullpath%
 			}
-			else
+			FileAppend ,*.* autoBackup Created in %sCurrentTime%,%sDest%\Backup_0\log.txt
+		}else  {
+			FormatTime, sNow, %a_now%, [yyyy-MM-dd%a_space%hh:mm:ss]
+			if FileExist(sLogfullpath)
 			{
-				FileAppend ,`n%sNow% backup stopped..., %sLogfullpath%
-				FileAppend ,`n%sNow% autobackup created `, extension* `, source:%sPath%\ `, destination:%sDest%\Backup_0\, %sLogfullpath%
+				FileAppend ,`n%sNow% warning! `, extension:* `, source:%sPath%\ `, destination:%sDest%\Backup_0\, %sLogfullpath%
+				FileAppend ,`n%sNow% can`t copy %ErrorCount% file(s)!
+			}else  {
+				FileAppend ,%sNow% warning! `, extension:* `, source:%sPath%\ `, destination:%sDest%\Backup_0\, %sLogfullpath%
+				FileAppend ,`n%sNow% can`t copy %ErrorCount% file(s)!
 			}
 		}
-		else
-		{
-			FileAppend ,%sNow% backup stopped..., %sLogfullpath%
-			FileAppend ,`n%sNow% autobackup created `, extension:* `, source:%sPath%\ `, destination:%sDest%\Backup_0\, %sLogfullpath%
-		}
-		FileAppend ,*.* autoBackup Created in %sCurrentTime%,%sDest%\Backup_0\log.txt
 	}
-	else 
-	{
-		FormatTime, sNow, %a_now%, [yyyy-MM-dd%a_space%hh:mm:ss]
-		if FileExist(sLogfullpath)
-		{
-			FileAppend ,`n%sNow% warning! `, extension:* `, source:%sPath%\ `, destination:%sDest%\Backup_0\, %sLogfullpath%
-			FileAppend ,`n%sNow% can`t copy %ErrorCount% file(s)!
-		}
-		else 
-		{
-			FileAppend ,%sNow% warning! `, extension:* `, source:%sPath%\ `, destination:%sDest%\Backup_0\, %sLogfullpath%
-			FileAppend ,`n%sNow% can`t copy %ErrorCount% file(s)!
-		}
-	}
+	If (bZipBackup = 1)
+		zipBackup(sDest "\Backup_0")
+	Gosub, ToggleBackup
+	return
 }
-Gosub, ToggleBackup
-return
+	
 GuiClose:
-Gosub, ExitSub
-Return
+{
+	Gosub, ExitSub
+	Return
+}
+
 ToggleBackup:
 {
 	toggle := !toggle
@@ -630,13 +617,12 @@ ToggleBackup:
 			tInterval:=60000
 		}
 		SetTimer, Backup, %tInterval%
-	}
-	else
-	{
+	}else  {
 		SetTImer, Backup, Off
 	}
 	return
 }
+
 backup:
 {
 	if(bCopyallExts = false)
@@ -650,7 +636,6 @@ backup:
 				ErrorCount := ErrorLevel
 				If (ErrorCount = 0)
 				{
-
 					FormatTime, sNow, %a_now%, [yyyy-MM-dd%a_space%hh:mm:ss]
 					xttemp:=ExtArr%A_Index%
 					if FileExist(sLogfullpath)
@@ -660,40 +645,31 @@ backup:
 						{
 							FileDelete, %sLogfullpath%
 							FileAppend ,%sNow% backup created `, extension:%xttemp% `, source:%sPath%\ `, destination:%sDest%\Backup_%iBkupNum%\, %sLogfullpath%
-						}
-						else
-						{
+						}else  {
 							FileAppend ,`n%sNow% backup created `, extension:%xttemp% `, source:%sPath%\ `, destination:%sDest%\Backup_%iBkupNum%\, %sLogfullpath%
 						}
-					}
-					else
-					{
+					}else  {
 						FileAppend ,%sNow% backup created `, extension:%xttemp% `, source:%sPath%\ `, destination:%sDest%\Backup_%iBkupNum%\, %sLogfullpath%
 					}
 					FileDelete, %sDest%\Backup_%iBkupNum%\log.txt
 					FormatTime, sCurrentTime ,  dddd MMMM d yyyy hh:mm:ss tt
 					FileAppend ,backup from *.%xttemp% Created in %sCurrentTime%,%sDest%\Backup_%iBkupNum%\log.txt
-				}
-				else
-				{
+				}else  {
 					FormatTime, sNow, %a_now%, [yyyy-MM-dd%a_space%hh:mm:ss]
 					xttemp:=ExtArr%A_Index%
 					If FileExist(sLogfullpath)
 					{
 						FileAppend ,`n%sNow% warning! `, extension:%xttemp% `, source:%sPath%\ `, destination:%sDest%\Backup_%iBkupNum%\, %sLogfullpath%
 						FileAppend ,`n%sNow% can`t copy %ErrorCount% file(s)!
-					}
-					else
-					{
+					}else  {
 						FileAppend ,%sNow% warning! `, extension:%xttemp% `, source:%sPath%\ `, destination:%sDest%\Backup_%iBkupNum%\, %sLogfullpath%
 						FileAppend ,`n%sNow% can`t copy %ErrorCount% file(s)!
 					}
 				}
 			}
 		}
-	}
-	else If ( bCopyallExts = True)
-	{
+	}else   If ( bCopyallExts = True)
+	 {
 		FileCopy, %sPath%\*.*, %sDest%\Backup_%iBkupNum%\, 1
 		If (ErrorCount = 0)
 		{
@@ -707,33 +683,27 @@ backup:
 				{
 					FileDelete, %sLogfullpath%
 					FileAppend ,%sNow% backup created `, extension:* `, source:%sPath%\ `, destination:%sDest%\Backup_%iBkupNum%\, %sLogfullpath%
-				}
-				else
-				{
+				}else  {
 					FileAppend ,`n%sNow% backup created `, extension:* `, source:%sPath%\ `, destination:%sDest%\Backup_%iBkupNum%\, %sLogfullpath%
 				}
-			}
-			else
-			{
+			}else  {
 				FileAppend ,%sNow% backup created `, extension:* `, source:%sPath%\ `, destination:%sDest%\Backup_%iBkupNum%\, %sLogfullpath%
 			}
 			FileAppend ,backup from *.* Created in %sCurrentTime%,%sDest%\Backup_%iBkupNum%\log.txt
-		}
-		else
-		{
+		}else  {
 			FormatTime, sNow, %a_now%, [yyyy-MM-dd%a_space%hh:mm:ss]
 			if FileExist(sLogfullpath)
 			{
 				FileAppend ,`n%sNow% warning! `, extension:* `, source:%sPath%\ `, destination:%sDest%\Backup_%iBkupNum%\, %sLogfullpath%
 				FileAppend ,`n%sNow% can`t copy %ErrorCount% file(s)!
-			}
-			else
-			{
+			}else  {
 				FileAppend ,%sNow% warning! `, extension:* `, source:%sPath%\ `, destination:%sDest%\Backup_%iBkupNum%\, %sLogfullpath%
 				FileAppend ,`n%sNow% can`t copy %ErrorCount% file(s)!
 			}
 		}
 	}
+	If (bZipBackup = 1)
+		zipBackup(sDest "\Backup_" iBkupNum)
 	iBkupNum := iBkupNum + 1
 	if (iBkupNum > iBackupCount )
 	{
@@ -744,64 +714,65 @@ backup:
 
 BKbtn:
 {
-    sCVar :=InStr(FileExist(sCustomDest),"D")
-    If (sCVar!=0)
-        FileSelectFolder,OutputVar3 ,*%sCustomDest% , 3
-    Else
-        FileSelectFolder,OutputVar3 ,*%sDest% , 3
-    if OutputVar3 =
-        return
-    GuiControlGet, sPath,, SLedit
-    GuiControlGet, Extstring ,, extsediVar, 
-    StringReplace, Extstring,Extstring,`n,,All
-    StringReplace, Extstring, Extstring,%A_SPACE%,, All
-    StringReplace, Extstring, Extstring,%A_Tab%,, All
-    StringReplace, Extstring, Extstring,/,, All
-    StringReplace, Extstring, Extstring,\,, All
-    StringReplace, Extstring, Extstring,:,, All
-    StringReplace, Extstring, Extstring,|,, All
-    StringReplace, Extstring, Extstring,",, All
-    StringReplace, Extstring, Extstring,<,, All
-    StringReplace, Extstring, Extstring,>,, All
-    StringReplace, Extstring, Extstring,`,,, All
-    sExts := Extstring
-    stringSplit, ExtArr, Extstring ,`;,
-    PathPattern := spath
-    sPVar :=InStr(FileExist(PathPattern),"D")
-    If (sPVar=0)
-    {
-        msgbox,The foldername you entered could not be found: %sPath%
-        return
-    }
-    sDVar :=InStr(FileExist(OutputVar3),"D")
-    If (sDVar=0)
-    {
-        FileCreateDir, %OutputVar3%
-        erl:=ErrorLevel
-        if(erl<>0)
-        {
-            msgbox,The foldername you entered could not be created: %OutputVar3%
-            return
-        }
-    }
-    bCopyallExts:=false
-    loop, %ExtArr0%
-    {
-        if(ExtArr%A_Index%="*")
-        {
-            bCopyallExts:=true
-            Break
-        }
-    }
-    FormatTime, sNow, %a_now%, [yyyy-MM-dd_hh-mm-ss]
-    sBackupPath = %OutputVar3%\STBackup%sNow%
-    FileCreateDir, %sBackupPath%
-    erl:=ErrorLevel
-    if(erl<>0)
-    {
-        msgbox,backup could not be created inside the seleted folder: %OutputVar3%
-        return
-    }
+	sCVar :=InStr(FileExist(sCustomDest),"D")
+	If (sCVar!=0)
+		FileSelectFolder,OutputVar3 ,*%sCustomDest% , 3, Manual backup location
+	Else
+		FileSelectFolder,OutputVar3 ,*%sDest% , 3, Manual backup location
+	if OutputVar3 =
+	return
+	GuiControlGet, sPath,, SLedit
+	GuiControlGet, Extstring ,, extsediVar, 
+	StringReplace, Extstring,Extstring,`n,,All
+	StringReplace, Extstring, Extstring,%A_SPACE%,, All
+	StringReplace, Extstring, Extstring,%A_Tab%,, All
+	StringReplace, Extstring, Extstring,/,, All
+	StringReplace, Extstring, Extstring,\,, All
+	StringReplace, Extstring, Extstring,:,, All
+	StringReplace, Extstring, Extstring,|,, All
+	StringReplace, Extstring, Extstring,",, All ;"this line break notpad++ Syntax Highlighting
+	StringReplace, Extstring, Extstring,<,, All
+	StringReplace, Extstring, Extstring,>,, All
+	StringReplace, Extstring, Extstring,`,,, All
+	sExts := Extstring
+	stringSplit, ExtArr, Extstring ,`;,
+	PathPattern := spath
+	sPVar :=InStr(FileExist(PathPattern),"D")
+	If (sPVar=0)
+	{
+		msgbox,The foldername you entered could not be found: %sPath%
+		return
+	}
+	sDVar :=InStr(FileExist(OutputVar3),"D")
+	If (sDVar=0)
+	{
+		FileCreateDir, %OutputVar3%
+		erl:=ErrorLevel
+		if(erl<>0)
+		{
+			msgbox,The foldername you entered could not be created: %OutputVar3%
+			return
+		}
+	}
+	bCopyallExts:=false
+	loop, %ExtArr0%
+	{
+		if(ExtArr%A_Index%="*")
+		{
+			bCopyallExts:=true
+			Break
+		}
+	}
+	FormatTime, sNow, %a_now%, [yyyy-MM-dd_hh-mm-ss]
+	SplitPath, PathPattern, dname
+	sBackupPath = %OutputVar3%\STBackup_%dname%_%sNow%
+	FileCreateDir, %sBackupPath%
+	erl:=ErrorLevel
+	if(erl<>0)
+	{
+		msgbox,backup could not be created inside the seleted folder: %OutputVar3%
+		return
+	}
 	if(bCopyallExts = false)
 	{
 		loop, %ExtArr0%
@@ -812,14 +783,15 @@ BKbtn:
 				FileCopy, %sPath%\*.%tempExt1%, %sBackupPath%\, 1
 			}
 		}
-	}
-	else If ( bCopyallExts = True)
-	{
+	}else   If ( bCopyallExts = True)
+	 {
 		FileCopy, %sPath%\*.*, %sBackupPath%\, 1
 	}
-    sCustomDest := OutputVar3
-    IniWrite, %sCustomDest%, STB_settings.ini, History, Last Manual Backup Location
-    return
+	If (bZipBackup = 1)
+		zipBackup(sBackupPath)
+	sCustomDest := OutputVar3
+	IniWrite, %sCustomDest%, STB_settings.ini, History, Last Manual Backup Location
+	return
 }
 
 ExitSub:
@@ -836,16 +808,14 @@ ExitSub:
 		StringReplace, Extstring, Extstring,\,, All
 		StringReplace, Extstring, Extstring,:,, All
 		StringReplace, Extstring, Extstring,|,, All
-		StringReplace, Extstring, Extstring,",, All
+		StringReplace, Extstring, Extstring,",, All ;"this line break notpad++ Syntax Highlighting
 		StringReplace, Extstring, Extstring,<,, All
 		StringReplace, Extstring, Extstring,>,, All
 		StringReplace, Extstring, Extstring,`,,, All
 		if(Extstring ="")
 		{
 			sExts := "*;"
-		}
-		Else
-		{
+		}else  {
 			sExts := Extstring
 		}
 		IniWrite, %sPath%, STB_settings.ini, Paths, Files Location
@@ -854,10 +824,11 @@ ExitSub:
 		IniWrite, %iBackupCount%, STB_settings.ini, Option, Backups Count 
 		IniWrite, %iBkupNum%, STB_settings.ini, History, Next Backup Number
 		IniWrite, %sExts%, STB_settings.ini, Option , Extensions
-        IniWrite, %sCustomDest%, STB_settings.ini, History, Last Manual Backup Location
+		IniWrite, %sCustomDest%, STB_settings.ini, History, Last Manual Backup Location
+		IniWrite, %bZipBackup%, STB_settings.ini, Option, Zip Backups
 		FormatTime, sNow, %a_now%, [yyyy-MM-dd%a_space%hh:mm:ss]
 		FileAppend ,`n%sNow% exiting program..., %sLogfullpath%
 		sleep, 50
 	}
 	ExitApp
-}
+}              

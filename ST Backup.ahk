@@ -225,6 +225,8 @@ BPbtn:
 	FileSelectFolder,OutputVar2 , , 3, Backups location
 	if OutputVar2 =
 	return
+	FileCreateDir, %OutputVar2%\ST_Backups
+	OutputVar2 .= "\ST_Backups"
 	GuiControl,, BLedit, %OutputVar2%
 	sDest := OutputVar2
 	IniWrite, %sDest%, STB_settings.ini, Paths, Backups Location

@@ -141,7 +141,7 @@ Gui,Add,Button,x400 y290 w45 h25 disabled vEDbtncancelvar gextsEDcancelbtn,Cance
 Gui, Add, Button, x322 y338 w70 h40 center +Disabled vBKvar gBKbtn , Manual Backup
 
 if sPath !=
-GuiControl, Enabled, BKvar
+	GuiControl, Enabled, BKvar
 
 Gui,Add,Checkbox,x44 y300 w100 h20 %black% -Wrap vZipBackupvar gZipBackupcbx,Zip backups?
 

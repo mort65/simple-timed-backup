@@ -436,7 +436,7 @@ ACbtn:
 					ErrorCount := ErrorLevel
 					If (ErrorCount = 0)
 					{
-						FormatTime, sNow, %a_now%, [yyyy-MM-dd%a_space%hh:mm:ss]
+						FormatTime, sNow, %a_now% T12, [yyyy-MM-dd%a_space%HH:mm:ss]
 						xttemp:=ExtArr%A_Index%
 						if FileExist(sLogfullpath)
 						{
@@ -455,10 +455,10 @@ ACbtn:
 							FileAppend ,`n%sNow% autobackup created `, extension:%xttemp% `, source:%sPath%\ `, destination:%sDest%\Backup_0\, %sLogfullpath%
 						}
 						FileDelete, %sDest%\Backup_0\log.txt
-						FormatTime, sCurrentTime ,  dddd MMMM d yyyy hh:mm:ss tt
+						FormatTime, sCurrentTime ,  dddd MMMM d yyyy HH:mm:ss T12
 						FileAppend ,*.%xttemp% autoBackup Created in %sCurrentTime%,%sDest%\Backup_0\log.txt
 					}else  {
-						FormatTime, sNow, %a_now%, [yyyy-MM-dd%a_space%hh:mm:ss]
+						FormatTime, sNow, %a_now% T12, [yyyy-MM-dd%a_space%HH:mm:ss]
 						xttemp:=ExtArr%A_Index%
 						if FileExist(sLogfullpath)
 						{
@@ -477,8 +477,8 @@ ACbtn:
 			If (ErrorCount = 0)
 			{
 				FileDelete, %sDest%\Backup_0\log.txt
-				FormatTime, sNow, %a_now%, [yyyy-MM-dd%a_space%hh:mm:ss]
-				FormatTime, sCurrentTime ,  dddd MMMM d yyyy hh:mm:ss tt
+				FormatTime, sNow, %a_now% T12, [yyyy-MM-dd%a_space%HH:mm:ss]
+				FormatTime, sCurrentTime ,  dddd MMMM d yyyy HH:mm:ss T12
 				if FileExist(sLogfullpath)
 				{
 					FileGetSize, logsizekb, %sLogfullpath%, K
@@ -497,7 +497,7 @@ ACbtn:
 				}
 				FileAppend ,*.* autoBackup Created in %sCurrentTime%,%sDest%\Backup_0\log.txt
 			}else  {
-				FormatTime, sNow, %a_now%, [yyyy-MM-dd%a_space%hh:mm:ss]
+				FormatTime, sNow, %a_now% T12, [yyyy-MM-dd%a_space%HH:mm:ss]
 				if FileExist(sLogfullpath)
 				{
 					FileAppend ,`n%sNow% warning! `, extension:* `, source:%sPath%\ `, destination:%sDest%\Backup_0\, %sLogfullpath%
@@ -546,7 +546,7 @@ DEbtn:
 				ErrorCount := ErrorLevel
 				If (ErrorCount = 0)
 				{
-					FormatTime, sNow, %a_now%, [yyyy-MM-dd%a_space%hh:mm:ss]
+					FormatTime, sNow, %a_now% T12, [yyyy-MM-dd%a_space%HH:mm:ss]
 					xttemp:=ExtArr%A_Index%
 					if FileExist(sLogfullpath)
 					{
@@ -565,10 +565,10 @@ DEbtn:
 						FileAppend ,`n%sNow% autobackup created `, extension:%xttemp% `, source:%sPath%\ `, destination:%sDest%\Backup_0\, %sLogfullpath%
 					}
 					FileDelete, %sDest%\Backup_0\log.txt
-					FormatTime, sCurrentTime ,  dddd MMMM d yyyy hh:mm:ss tt
+					FormatTime, sCurrentTime ,  dddd MMMM d yyyy HH:mm:ss T12
 					FileAppend ,*.%xttemp% autoBackup Created in %sCurrentTime%,%sDest%\Backup_0\log.txt
 				}else  {
-					FormatTime, sNow, %a_now%, [yyyy-MM-dd%a_space%hh:mm:ss]
+					FormatTime, sNow, %a_now% T12, [yyyy-MM-dd%a_space%HH:mm:ss]
 					if FileExist(sLogfullpath)
 					{
 						FileAppend ,`n%sNow% warning! `, extension:%xttemp% `, source:%sPath%\ `, destination:%sDest%\Backup_0\, %sLogfullpath%
@@ -586,8 +586,8 @@ DEbtn:
 		If (ErrorCount = 0)
 		{
 			FileDelete, %sDest%\Backup_0\log.txt
-			FormatTime, sNow, %a_now%, [yyyy-MM-dd%a_space%hh:mm:ss]
-			FormatTime, sCurrentTime ,  dddd MMMM d yyyy hh:mm:ss tt
+			FormatTime, sNow, %a_now% T12, [yyyy-MM-dd%a_space%HH:mm:ss]
+			FormatTime, sCurrentTime ,  dddd MMMM d yyyy HH:mm:ss T12
 			if FileExist(sLogfullpath)
 			{
 				FileGetSize, logsizekb, %sLogfullpath%, K
@@ -606,7 +606,7 @@ DEbtn:
 			}
 			FileAppend ,*.* autoBackup Created in %sCurrentTime%,%sDest%\Backup_0\log.txt
 		}else  {
-			FormatTime, sNow, %a_now%, [yyyy-MM-dd%a_space%hh:mm:ss]
+			FormatTime, sNow, %a_now% T12, [yyyy-MM-dd%a_space%HH:mm:ss]
 			if FileExist(sLogfullpath)
 			{
 				FileAppend ,`n%sNow% warning! `, extension:* `, source:%sPath%\ `, destination:%sDest%\Backup_0\, %sLogfullpath%
@@ -658,7 +658,7 @@ backup:
 				ErrorCount := ErrorLevel
 				If (ErrorCount = 0)
 				{
-					FormatTime, sNow, %a_now%, [yyyy-MM-dd%a_space%hh:mm:ss]
+					FormatTime, sNow, %a_now% T12, [yyyy-MM-dd%a_space%HH:mm:ss]
 					xttemp:=ExtArr%A_Index%
 					if FileExist(sLogfullpath)
 					{
@@ -674,10 +674,10 @@ backup:
 						FileAppend ,%sNow% backup created `, extension:%xttemp% `, source:%sPath%\ `, destination:%sDest%\Backup_%iBkupNum%\, %sLogfullpath%
 					}
 					FileDelete, %sDest%\Backup_%iBkupNum%\log.txt
-					FormatTime, sCurrentTime ,  dddd MMMM d yyyy hh:mm:ss tt
+					FormatTime, sCurrentTime ,  dddd MMMM d yyyy HH:mm:ss T12
 					FileAppend ,backup from *.%xttemp% Created in %sCurrentTime%,%sDest%\Backup_%iBkupNum%\log.txt
 				}else  {
-					FormatTime, sNow, %a_now%, [yyyy-MM-dd%a_space%hh:mm:ss]
+					FormatTime, sNow, %a_now% T12, [yyyy-MM-dd%a_space%HH:mm:ss]
 					xttemp:=ExtArr%A_Index%
 					If FileExist(sLogfullpath)
 					{
@@ -696,8 +696,8 @@ backup:
 		If (ErrorCount = 0)
 		{
 			FileDelete, %sDest%\Backup_%iBkupNum%\log.txt
-			FormatTime, sNow, %a_now%, [yyyy-MM-dd%a_space%hh:mm:ss]
-			FormatTime, sCurrentTime ,  dddd MMMM d yyyy hh:mm:ss tt
+			FormatTime, sNow, %a_now% T12, [yyyy-MM-dd%a_space%HH:mm:ss]
+			FormatTime, sCurrentTime ,  dddd MMMM d yyyy HH:mm:ss T12
 			if FileExist(sLogfullpath)
 			{
 				FileGetSize, logsizekb, %sLogfullpath%, K
@@ -713,7 +713,7 @@ backup:
 			}
 			FileAppend ,backup from *.* Created in %sCurrentTime%,%sDest%\Backup_%iBkupNum%\log.txt
 		}else  {
-			FormatTime, sNow, %a_now%, [yyyy-MM-dd%a_space%hh:mm:ss]
+			FormatTime, sNow, %a_now% T12, [yyyy-MM-dd%a_space%HH:mm:ss]
 			if FileExist(sLogfullpath)
 			{
 				FileAppend ,`n%sNow% warning! `, extension:* `, source:%sPath%\ `, destination:%sDest%\Backup_%iBkupNum%\, %sLogfullpath%
@@ -787,7 +787,7 @@ BKbtn:
 			Break
 		}
 	}
-	FormatTime, sNow, %a_now%, [yyyy-MM-dd_hh-mm-ss]
+	FormatTime, sNow, %a_now% T12, [yyyy-MM-dd_HH-mm-ss]
 	SplitPath, PathPattern, dname
 	sBackupPath = %OutputVar3%\STBackup_%dname%_%sNow%
 	FileCreateDir, %sBackupPath%
@@ -851,7 +851,7 @@ ExitSub:
 		IniWrite, %sExts%, STB_settings.ini, Option , Extensions
 		IniWrite, %sCustomDest%, STB_settings.ini, History, Last Manual Backup Location
 		IniWrite, %bZipBackup%, STB_settings.ini, Option, Zip Backups
-		FormatTime, sNow, %a_now%, [yyyy-MM-dd%a_space%hh:mm:ss]
+		FormatTime, sNow, %a_now% T12, [yyyy-MM-dd%a_space%HH:mm:ss]
 		FileAppend ,`n%sNow% exiting program..., %sLogfullpath%
 		sleep, 50
 	}

@@ -854,6 +854,7 @@ ExitSub:
 		IniWrite, %iBackupCount%, STB_settings.ini, Option, Backups Count 
 		IniWrite, %iBkupNum%, STB_settings.ini, History, Next Backup Number
 		IniWrite, %sExts%, STB_settings.ini, Option , Extensions
+        IniWrite, %sCustomDest%, STB_settings.ini, History, Last Manual Backup Location
 		FormatTime, sNow, %a_now%, [yyyy-MM-dd%a_space%hh:mm:ss]
 		FileAppend ,`n%sNow% exiting program..., %sLogfullpath%
 		sleep, 50

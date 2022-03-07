@@ -713,6 +713,7 @@ backup:
 	{
 		iBkupNum := 1
 	}
+    IniWrite, %iBkupNum%, STB_settings.ini, History, Next Backup Number
 	Return
 }
 

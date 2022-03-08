@@ -24,6 +24,8 @@ blue:="c0x056bed"
 lightgrey:="bad8cf"
 lightgreen:="d0e970"
 bZipBackup := 0
+errIcon := 16
+infoIcon := 64
 
 IsEmpty(Dir){
    Loop %Dir%\*.*, 0, 1
@@ -90,6 +92,22 @@ zipBackup(sPath)
 	FileMove, %sParent%\%sName%.zip,%sPath%,1
 }
 
+trimExts(ByRef sExtensions)
+{
+	StringReplace, sExtensions, sExtensions,`n,,All
+	StringReplace, sExtensions, sExtensions,%A_SPACE%,, All
+	StringReplace, sExtensions, sExtensions,%A_Tab%,, All
+    StringReplace, sExtensions, sExtensions,.,, All
+	StringReplace, sExtensions, sExtensions,/,, All
+	StringReplace, sExtensions, sExtensions,\,, All
+	StringReplace, sExtensions, sExtensions,:,, All
+	StringReplace, sExtensions, sExtensions,|,, All
+	StringReplace, sExtensions, sExtensions,",, All ;"a comment to fix notpad++ Syntax Highlighting
+	StringReplace, sExtensions, sExtensions,<,, All
+	StringReplace, sExtensions, sExtensions,>,, All
+	StringReplace, sExtensions, sExtensions,`,,, All
+}
+
 if (FileExist("STB_settings.ini"))
 {
 	IniRead, sPath, STB_settings.ini, Paths, Files Location 
@@ -114,6 +132,7 @@ if (FileExist("STB_settings.ini"))
 
 Hotkey, ^!x, ExitSub
 OnExit, ExitSub
+
 Gui, +LastFound
 WinSet, Transparent, 254
 GUI, -ToolWindow
@@ -139,10 +158,10 @@ Gui,Add,Edit,x126 y250 w38 h18 %black% Number ReadOnly vBCedit gBCedit
 Gui,Add,UpDown,x146 y275 w18 h18 0x20 Range1-100,%iBackupCount%,vBCud
 Gui,Font,s10 Normal ,tahoma
 Gui,Add,Button,x80 y410 w110 h40 center vACvar gACbtn,Activate
-Gui,Add,Button,x302 y410 w110 h40 +Disabled vDEvar gDEbtn,Deactivate 
+Gui,Add,Button,x302 y410 w110 h40 +Disabled vDEvar gDEbtn,Deactivate
 Gui,Font,s8 Normal ,tahoma
 Gui,Add,Text,x44 y200 w70 h13 %black% left ,Backup every:
-Gui,Add,Text,x44 y250 w80 h13 %black% left  ,Backups count:
+Gui,Add,Text,x44 y250 w80 h13 %black% left ,Backups count:
 Gui,Add,Text,x170 y200 w40 h25 %black% ,minutes
 Gui,Font,Normal s14  Bold ,Segoe UI
 Gui,Add,Text,x30 y338 w200 h50 Center %red% vNotetext,%sBackupf%
@@ -153,7 +172,7 @@ Gui,Add,Text,x268 y175 w140 h20 %black% -Wrap,File extensions to backup:
 Gui,Add,Button,x335 y290 w45 h25  vEDbtnvar gextsEDbtn,Edit
 Gui,Add,Button,x270 y290 w45 h25 disabled vEDbtnokvar gextsEDokbtn,Ok
 Gui,Add,Button,x400 y290 w45 h25 disabled vEDbtncancelvar gextsEDcancelbtn,Cancel
-Gui, Add, Button, x322 y338 w70 h40 center +Disabled vBKvar gBKbtn , Manual Backup
+Gui,Add,Button, x322 y338 w70 h40 center +Disabled vBKvar gBKbtn , Manual Backup
 
 if sPath !=
 	GuiControl, Enabled, BKvar
@@ -165,8 +184,47 @@ if (bZipBackup = 1)
 else
 	GuiControl,, ZipBackupvar, 0
 
+;Tooltips
+SLedit_TT := "The source folder."
+BLedit_TT := "The destination folder for storing backups."
+SPvar_TT := "Change the source folder."
+BPvar_TT := "Change the destination folder."
+BCedit_TT := "How many backups should be created before overwriting previous backups."
+ACvar_TT := "First, a backup will be created inside the ""backup_0"" folder.`nThen automated backups will be created at the selected interval."
+DEvar_TT := "First, a backup will be created inside the ""backup_0"" folder.`nThen creating automated backups will be stopped."
+extsediVar_TT := "Extensions are separated by `;`n* means any extension"
+BKvar_TT := "Takes a manual backup inside the selected folder."
+ZipBackupvar_TT := "Toggles the compression of backups."
+BIedit_TT := "Automated backups will be created at the selected interval."
+EDbtnvar_TT := "Edit what file types to backup."
+
 Gui,Show,x390 y122 w500 h500 ,Simple Timed Backup
+OnMessage(0x200, "WM_MOUSEMOVE")
 Return
+
+WM_MOUSEMOVE()
+{
+    static CurrControl, PrevControl, _TT  ; _TT is kept blank for use by the ToolTip command below.
+    CurrControl := A_GuiControl
+    If (CurrControl <> PrevControl and not InStr(CurrControl, " "))
+    {
+        ToolTip  ; Turn off any previous tooltip.
+        SetTimer, DisplayToolTip, 1000
+        PrevControl := CurrControl
+    }
+    return
+
+    DisplayToolTip:
+    SetTimer, DisplayToolTip, Off
+    ToolTip % %CurrControl%_TT  ; The leading percent sign tell it to use an expression.
+    SetTimer, RemoveToolTip, 3000
+    return
+
+    RemoveToolTip:
+    SetTimer, RemoveToolTip, Off
+    ToolTip
+    return
+}
 
 extsEDcancelbtn:
 {
@@ -201,20 +259,13 @@ extsEDbtn:
 
 extsEDokbtn:
 {
-	GuiControlGet, Extstring ,, extsediVar, 
-	StringReplace, Extstring,Extstring,`n,,All
-	StringReplace, Extstring, Extstring,%A_SPACE%,, All
-	StringReplace, Extstring, Extstring,%A_Tab%,, All
-    StringReplace, Extstring, Extstring,.,, All
-	StringReplace, Extstring, Extstring,/,, All
-	StringReplace, Extstring, Extstring,\,, All
-	StringReplace, Extstring, Extstring,:,, All
-	StringReplace, Extstring, Extstring,|,, All
-	StringReplace, Extstring, Extstring,",, All ;"this line breaks notpad++ Syntax Highlighting
-	StringReplace, Extstring, Extstring,<,, All
-	StringReplace, Extstring, Extstring,>,, All
-	StringReplace, Extstring, Extstring,`,,, All
+	GuiControlGet, Extstring ,, extsediVar,
+    trimExts(Extstring)
 	sExts := Extstring
+    If InStr(sExts, "*")
+        sExts := "*;"
+    if sExts =
+        sExts := "*;"
 	GuiControl,,extsediVar, %sExts%
 	GuiControl, +ReadOnly, extsediVar
 	GuiControl, Disabled, EDbtncancelvar
@@ -285,21 +336,6 @@ BIud:
 
 extsEdit:
 {
-	ExtArr := Object()
-	GuiControlGet, Extstring ,, extsediVar, 
-	StringReplace,Extstring,Extstring,`n,,All
-	StringReplace, Extstring, Extstring,%A_SPACE%,, All
-	StringReplace, Extstring, Extstring,%A_Tab%,, All
-    StringReplace, Extstring, Extstring,.,, All
-	StringReplace, Extstring, Extstring,/,, All
-	StringReplace, Extstring, Extstring,\,, All
-	StringReplace, Extstring, Extstring,:,, All
-	StringReplace, Extstring, Extstring,|,, All
-	StringReplace, Extstring, Extstring,",, All ;"this line breaks notpad++ Syntax Highlighting
-	StringReplace, Extstring, Extstring,<,, All
-	StringReplace, Extstring, Extstring,>,, All
-	StringReplace, Extstring, Extstring,`,,, All
-	StringSplit, ExtArr, Extstring ,`;,`n
 	Return
 }
 	
@@ -321,19 +357,8 @@ ACbtn:
 	GuiControlGet, sDest,, BLedit
 	GuiControlGet, tInterVal,, BIedit
 	GuiControlGet, iBackupCount,, BCedit
-	GuiControlGet, Extstring ,, extsediVar, 
-	StringReplace, Extstring,Extstring,`n,,All
-	StringReplace, Extstring, Extstring,%A_SPACE%,, All
-	StringReplace, Extstring, Extstring,%A_Tab%,, All
-    StringReplace, Extstring, Extstring,.,, All
-	StringReplace, Extstring, Extstring,/,, All
-	StringReplace, Extstring, Extstring,\,, All
-	StringReplace, Extstring, Extstring,:,, All
-	StringReplace, Extstring, Extstring,|,, All
-	StringReplace, Extstring, Extstring,",, All ;"this line breaks notpad++ Syntax Highlighting
-	StringReplace, Extstring, Extstring,<,, All
-	StringReplace, Extstring, Extstring,>,, All
-	StringReplace, Extstring, Extstring,`,,, All
+	GuiControlGet, Extstring ,, extsediVar,
+    trimExts(Extstring)
 	sExts := Extstring
 	StringSplit, ExtArr, Extstring ,`;,
 	PathPattern := spath
@@ -347,17 +372,20 @@ ACbtn:
 		iBackupCount := 10
 	}else   If (sPVar=0)
 	 {
-		msgbox,The foldername you entered could not be found: %sPath%
+        SplashTextOff
+		msgbox,% errIcon,, The foldername you entered could not be found: %sPath%
 		return
 	}
 	Else If tInterval not between 1 and 720
 	{
-		msgbox,Your Backup Interval is not within the valid range: 1-720
+        SplashTextOff
+		msgbox,% errIcon,, Your Backup Interval is not within the valid range: 1-720
 		return
 	}
 	Else If  iBackupCount not between 1 and 100
 	{
-		msgbox,Your Backup Count is not within the valid range: 1-100
+        SplashTextOff
+		msgbox,% errIcon,, Your Backup Count is not within the valid range: 1-100
 		return
 	}else  {
 		If (sPath=sDest)
@@ -381,7 +409,8 @@ ACbtn:
 			erl:=ErrorLevel
 			if(erl<>0)
 			{
-				msgbox,The foldername you entered could not be created: %sDest%
+                SplashTextOff
+				msgbox,% errIcon,, The foldername you entered could not be created: %sDest%
 				return
 			}
 		}
@@ -690,9 +719,10 @@ backup:
 				}
 			}
 		}
-	}else   If ( bCopyallExts = True)
+	}else If ( bCopyallExts = True)
 	 {
 		FileCopy, %sPath%\*.*, %sDest%\Backup_%iBkupNum%\, 1
+        ErrorCount := ErrorLevel
 		If (ErrorCount = 0)
 		{
 			FileDelete, %sDest%\Backup_%iBkupNum%\log.txt
@@ -746,25 +776,15 @@ BKbtn:
 	return
 	GuiControlGet, sPath,, SLedit
 	GuiControlGet, Extstring ,, extsediVar, 
-	StringReplace, Extstring,Extstring,`n,,All
-	StringReplace, Extstring, Extstring,%A_SPACE%,, All
-	StringReplace, Extstring, Extstring,%A_Tab%,, All
-    StringReplace, Extstring, Extstring,.,, All
-	StringReplace, Extstring, Extstring,/,, All
-	StringReplace, Extstring, Extstring,\,, All
-	StringReplace, Extstring, Extstring,:,, All
-	StringReplace, Extstring, Extstring,|,, All
-	StringReplace, Extstring, Extstring,",, All ;"this line breaks notpad++ Syntax Highlighting
-	StringReplace, Extstring, Extstring,<,, All
-	StringReplace, Extstring, Extstring,>,, All
-	StringReplace, Extstring, Extstring,`,,, All
+    trimExts(Extstring)
 	sExts := Extstring
 	stringSplit, ExtArr, Extstring ,`;,
 	PathPattern := spath
 	sPVar :=InStr(FileExist(PathPattern),"D")
 	If (sPVar=0)
 	{
-		msgbox,The foldername you entered could not be found: %sPath%
+        SplashTextOff
+		msgbox,% errIcon,, The foldername you entered could not be found: %sPath%
 		return
 	}
 	sDVar :=InStr(FileExist(OutputVar3),"D")
@@ -774,7 +794,8 @@ BKbtn:
 		erl:=ErrorLevel
 		if(erl<>0)
 		{
-			msgbox,The foldername you entered could not be created: %OutputVar3%
+            SplashTextOff
+			msgbox,% errIcon,, The foldername you entered could not be created: %OutputVar3%
 			return
 		}
 	}
@@ -794,7 +815,8 @@ BKbtn:
 	erl:=ErrorLevel
 	if(erl<>0)
 	{
-		msgbox,backup could not be created inside the seleted folder: %OutputVar3%
+        SplashTextOff
+		msgbox,% errIcon,, Backup could not be created inside the seleted folder: %OutputVar3%
 		return
 	}
 	if(bCopyallExts = false)
@@ -805,38 +827,43 @@ BKbtn:
 			{
 				tempExt1:=ExtArr%A_Index%
 				FileCopy, %sPath%\*.%tempExt1%, %sBackupPath%\, 1
+                ErrorCount := ErrorLevel
+                If (ErrorCount <> 0)
+                {
+                    SplashTextOff
+                    msgBox,% errIcon,, Cannot copy some files!
+                    Return
+                }
 			}
 		}
-	}else   If ( bCopyallExts = True)
+	}else If ( bCopyallExts = True)
 	 {
 		FileCopy, %sPath%\*.*, %sBackupPath%\, 1
+        ErrorCount := ErrorLevel
+        If (ErrorCount <> 0)
+        {
+            SplashTextOff
+            msgBox,% errIcon,, Cannot copy some files!
+            Return
+        }
 	}
 	If (bZipBackup = 1)
 		zipBackup(sBackupPath)
 	sCustomDest := OutputVar3
 	IniWrite, %sCustomDest%, STB_settings.ini, History, Last Manual Backup Location
+    SplashTextOff
+    msgBox ,% infoIcon,, Backup finished.
 	return
 }
 
 ExitSub:
 {
-	if A_ExitReason not in Logoff,Shutdown  
+	if A_ExitReason not in Logoff,Shutdown
 	{
 		SetTImer, Backup, Off
 		sleep, 50
-		GuiControlGet, Extstring ,, extsediVar, 
-		StringReplace, Extstring,Extstring,`n,,All
-		StringReplace, Extstring, Extstring,%A_SPACE%,, All
-		StringReplace, Extstring, Extstring,%A_Tab%,, All
-        StringReplace, Extstring, Extstring,.,, All
-		StringReplace, Extstring, Extstring,/,, All
-		StringReplace, Extstring, Extstring,\,, All
-		StringReplace, Extstring, Extstring,:,, All
-		StringReplace, Extstring, Extstring,|,, All
-		StringReplace, Extstring, Extstring,",, All ;"this line breaks notpad++ Syntax Highlighting
-		StringReplace, Extstring, Extstring,<,, All
-		StringReplace, Extstring, Extstring,>,, All
-		StringReplace, Extstring, Extstring,`,,, All
+		GuiControlGet, Extstring ,, extsediVar,
+        trimExts(Extstring)
 		if(Extstring ="")
 		{
 			sExts := "*;"
@@ -856,4 +883,4 @@ ExitSub:
 		sleep, 50
 	}
 	ExitApp
-}              
+}

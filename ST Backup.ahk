@@ -83,7 +83,7 @@ zipBackup(sPath)
     }
 	SplitPath, sPath, sName, sParent
 	FileDelete, %sParent%\%sName%.zip
-    FileDelete, %sPath%\%sName%.zip
+    	FileDelete, %sPath%\%sName%.zip
 	Zip(sPath , sParent "\" sName ".zip")
 	FileRemoveDir, %sPath%, 1
 	FileCreateDir, %sPath%

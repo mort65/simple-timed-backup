@@ -141,30 +141,32 @@ GUI, -MaximizeBox
 Gui, Margin, 0, 0
 Gui,Font, 
 Gui, Add, GroupBox, x8 y4 w484 h484, 
-Gui,Add,Edit,x125 y56 w250 h22 %black%  ReadOnly vSLedit,
+Gui,Add,Edit,x120 y56 w250 h22 %black%  ReadOnly vSLedit,
 GuiControl,, SLedit, %sPath%
-Gui,Add,Edit,x125 y128 w250 h22 %black% ReadOnly vBLedit,
+Gui,Add,Edit,x120 y128 w250 h22 %black% ReadOnly vBLedit,
 GuiControl,, BLedit, %sDest%
-Gui,Add,Button,x397 y56 w80 h25  vSPvar gSPbtn,Change
-Gui,Add,Button,x398 y128 w80 h25 vBPvar gBPbtn,Change
+Gui,Add,Button,x380 y56 w50 h22  vSPvar gSPbtn,Change
+Gui,Add,Button,x380 y128 w50 h22 vBPvar gBPbtn,Change
+Gui, Add, Button, x436 y56 w50 h22 vOSPvar gOSPbtn, Open
+Gui, Add, Button, x436 y128 w50 h22 vOBPvar gOBPbtn, Open
 Gui,Font,s9
-Gui,Add,Text,x18 y58 w80 h13 %black%  Center,Files to Backup:
-Gui,Add,Text,x23 y130 w90 h13 %black%  center ,Backups Location:
+Gui,Add,Text,x23 y58 w90 h13 %black%  left,Files to Backup:
+Gui,Add,Text,x23 y130 w90 h13 %black%  left ,Backups Location:
 Gui,Font,
-Gui,Add,Edit,x127 y198 w38 h18 %black% Number ReadOnly vBIedit gBIedit
+Gui,Add,Edit,x120 y198 w38 h18 %black% Number ReadOnly vBIedit gBIedit
 mInterval := (tInterval/60000)
 Gui,Add,UpDown, 0x20 Range1-720 ,%mInterval%,vBIud
-Gui,Add,Edit,x126 y250 w38 h18 %black% Number ReadOnly vBCedit gBCedit
+Gui,Add,Edit,x120 y250 w38 h18 %black% Number ReadOnly vBCedit gBCedit
 Gui,Add,UpDown,x146 y275 w18 h18 0x20 Range1-100,%iBackupCount%,vBCud
 Gui,Font,s10 Normal ,tahoma
 Gui,Add,Button,x80 y410 w110 h40 center vACvar gACbtn,Activate
 Gui,Add,Button,x302 y410 w110 h40 +Disabled vDEvar gDEbtn,Deactivate
 Gui,Font,s8 Normal ,tahoma
-Gui,Add,Text,x44 y200 w70 h13 %black% left ,Backup every:
-Gui,Add,Text,x44 y250 w80 h13 %black% left ,Backups count:
-Gui,Add,Text,x170 y200 w40 h25 %black% ,minutes
+Gui,Add,Text,x33 y200 w80 h13 %black% left ,Backup every:
+Gui,Add,Text,x33 y250 w80 h13 %black% left ,Backups count:
+Gui,Add,Text,x164 y200 w40 h25 %black% ,minutes
 Gui,Font,Normal s14  Bold ,Segoe UI
-Gui,Add,Text,x30 y338 w200 h50 Center %red% vNotetext,%sBackupf%
+Gui,Add,Text,x30 y346 w200 h50 Center %red% vNotetext,%sBackupf%
 Gui,Font,Normal s12 %black%,Tahoma
 Gui,Add,Edit,x265 y200 w185 h103 %black% r4 1024 Lowercase Multi Border readonly 64 vextsediVar gextsEdit,%sExts%
 Gui,Font,Normal s9 %black%
@@ -177,7 +179,7 @@ Gui,Add,Button, x322 y338 w70 h40 center +Disabled vBKvar gBKbtn , Manual Backup
 if sPath !=
     GuiControl, Enabled, BKvar
 
-Gui,Add,Checkbox,x44 y300 w100 h20 %black% -Wrap vZipBackupvar gZipBackupcbx,Zip backups?
+Gui,Add,Checkbox,x33 y298 w100 h20 %black% -Wrap vZipBackupvar gZipBackupcbx,Zip backups?
 
 if (bZipBackup = 1)
     GuiControl,, ZipBackupvar, 1
@@ -302,6 +304,34 @@ BPbtn:
     Return
 }
 
+OSPbtn:
+{
+    if InStr(FileExist(sPath),"D")
+    {
+        Run, Explorer /n`,/e`,%sPath%
+    }
+    else 
+    {
+        SplashTextOff
+        msgbox,% errIcon,, The path you entered could not be found: %sPath%
+    }
+    return
+}
+
+OBPbtn:
+{
+    if InStr(FileExist(sDest),"D")
+    {
+        Run, Explorer /n`,/e`,%sDest%
+    }
+    else
+    {
+        SplashTextOff
+        msgbox,% errIcon,, The path you entered could not be found: %sDest%
+    }
+    return
+}
+
 BIedit:
 {
     GuiControlGet , BIedit
@@ -373,7 +403,7 @@ ACbtn:
     }else   If (sPVar=0)
      {
         SplashTextOff
-        msgbox,% errIcon,, The foldername you entered could not be found: %sPath%
+        msgbox,% errIcon,, The path you entered could not be found: %sPath%
         return
     }
     Else If tInterval not between 1 and 720
@@ -410,7 +440,7 @@ ACbtn:
             if(erl<>0)
             {
                 SplashTextOff
-                msgbox,% errIcon,, The foldername you entered could not be created: %sDest%
+                msgbox,% errIcon,, The path you entered could not be created: %sDest%
                 return
             }
         }
@@ -786,7 +816,7 @@ BKbtn:
     If (sPVar=0)
     {
         SplashTextOff
-        msgbox,% errIcon,, The foldername you entered could not be found: %sPath%
+        msgbox,% errIcon,, The path you entered could not be found: %sPath%
         return
     }
     sDVar :=InStr(FileExist(OutputVar3),"D")
@@ -797,7 +827,7 @@ BKbtn:
         if(erl<>0)
         {
             SplashTextOff
-            msgbox,% errIcon,, The foldername you entered could not be created: %OutputVar3%
+            msgbox,% errIcon,, The path you entered could not be created: %OutputVar3%
             return
         }
     }

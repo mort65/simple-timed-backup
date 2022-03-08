@@ -358,7 +358,7 @@ ACbtn:
 	GuiControlGet, tInterVal,, BIedit
 	GuiControlGet, iBackupCount,, BCedit
 	GuiControlGet, Extstring ,, extsediVar,
-	trimExts(Extstring)
+    trimExts(Extstring)
 	sExts := Extstring
 	StringSplit, ExtArr, Extstring ,`;,
 	PathPattern := spath
@@ -426,6 +426,7 @@ ACbtn:
 		GuiControl,Disabled,EDbtnvar
 		GuiControl, Disabled, EDbtncancelvar
 		GuiControl, Disabled, EDbtnokvar
+        GuiControl, Disabled, ZipBackupvar
 		GuiControl,,Notetext,%sBackupt%
 		Gui,Font,Normal s14 Bold %blue% ,Segoe UI
 		GuiControl, Font, Notetext 
@@ -554,6 +555,7 @@ DEbtn:
 	GuiControl,Enable,BIedit
 	GuiControl,Enable,SLedit
 	GuiControl,Enable,BLedit
+    GuiControl,Enable,ZipBackupvar
 	if(bIsEDExtsenabled = -1)
 	{
 		GuiControl,Enable,EDbtnvar

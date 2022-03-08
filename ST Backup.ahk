@@ -97,7 +97,7 @@ trimExts(ByRef sExtensions)
 	StringReplace, sExtensions, sExtensions,`n,,All
 	StringReplace, sExtensions, sExtensions,%A_SPACE%,, All
 	StringReplace, sExtensions, sExtensions,%A_Tab%,, All
-    StringReplace, sExtensions, sExtensions,.,, All
+	StringReplace, sExtensions, sExtensions,.,, All
 	StringReplace, sExtensions, sExtensions,/,, All
 	StringReplace, sExtensions, sExtensions,\,, All
 	StringReplace, sExtensions, sExtensions,:,, All

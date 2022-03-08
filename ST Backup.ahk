@@ -358,7 +358,7 @@ ACbtn:
 	GuiControlGet, tInterVal,, BIedit
 	GuiControlGet, iBackupCount,, BCedit
 	GuiControlGet, Extstring ,, extsediVar,
-    trimExts(Extstring)
+	trimExts(Extstring)
 	sExts := Extstring
 	StringSplit, ExtArr, Extstring ,`;,
 	PathPattern := spath

@@ -134,52 +134,51 @@ Hotkey, ^!x, ExitSub
 OnExit, ExitSub
 
 Gui, +LastFound
+;Gui, -theme
 WinSet, Transparent, 254
 GUI, -ToolWindow
 Gui, +CAPTION
 GUI, -MaximizeBox
 Gui, Margin, 0, 0
 Gui,Font, 
-Gui, Add, GroupBox, x8 y4 w484 h484, 
-Gui,Add,Edit,x120 y56 w250 h22 %black%  ReadOnly vSLedit,
+Gui, Add, GroupBox, x8 y4 w486 h486,
+gui,font,italic s8
+Gui,Add,Edit,x110 y46 w260 h22 %black%  ReadOnly  vSLedit,
 GuiControl,, SLedit, %sPath%
-Gui,Add,Edit,x120 y128 w250 h22 %black% ReadOnly vBLedit,
+Gui,Add,Edit,x110 y118 w260 h22 %black% ReadOnly  vBLedit,
+gui,font,
 GuiControl,, BLedit, %sDest%
-Gui,Add,Button,x380 y56 w50 h22  vSPvar gSPbtn,Change
-Gui,Add,Button,x380 y128 w50 h22 vBPvar gBPbtn,Change
-Gui, Add, Button, x436 y56 w50 h22 vOSPvar gOSPbtn, Open
-Gui, Add, Button, x436 y128 w50 h22 vOBPvar gOBPbtn, Open
-Gui,Font,s9
-Gui,Add,Text,x23 y58 w90 h13 %black%  left,Files to Backup:
-Gui,Add,Text,x23 y130 w90 h13 %black%  left ,Backups Location:
-Gui,Font,
-Gui,Add,Edit,x120 y198 w38 h18 %black% Number ReadOnly vBIedit gBIedit
+Gui,Add,Button,x378 y46 w50 h22 vSPvar gSPbtn,Change
+Gui,Add,Button,x378 y118 w50 h22  vBPvar gBPbtn,Change
+Gui, Add, Button, x436 y46 w50 h22  vOSPvar gOSPbtn, Open
+Gui, Add, Button, x436 y118 w50 h22  vOBPvar gOBPbtn, Open
+Gui,Add,Text,x16 y48 w90 h13 %black% left,Files to Backup:
+Gui,Add,Text,x16 y120 w90 h13 %black% left ,Backups Location:
+Gui,Add,Edit,x120 y198 w38 h24 %black% Number ReadOnly  vBIedit gBIedit
 mInterval := (tInterval/60000)
-Gui,Add,UpDown, 0x20 Range1-720 ,%mInterval%,vBIud
-Gui,Add,Edit,x120 y250 w38 h18 %black% Number ReadOnly vBCedit gBCedit
-Gui,Add,UpDown,x146 y275 w18 h18 0x20 Range1-100,%iBackupCount%,vBCud
-Gui,Font,s10 Normal ,tahoma
+Gui,Add,UpDown, 0x20  Range1-720 ,%mInterval%,vBIud
+Gui,Add,Edit,x120 y248 w38 h24 %black% Number ReadOnly  vBCedit gBCedit
+Gui,Add,UpDown, 0x20  Range1-100,%iBackupCount%,vBCud
 Gui,Add,Button,x80 y410 w110 h40 center vACvar gACbtn,Activate
 Gui,Add,Button,x302 y410 w110 h40 +Disabled vDEvar gDEbtn,Deactivate
-Gui,Font,s8 Normal ,tahoma
-Gui,Add,Text,x33 y200 w80 h13 %black% left ,Backup every:
-Gui,Add,Text,x33 y250 w80 h13 %black% left ,Backups count:
-Gui,Add,Text,x164 y200 w40 h25 %black% ,minutes
+Gui,Add,Text,x33 y202 w80 h13 %black% left ,Backup every:
+Gui,Add,Text,x33 y252 w80 h13 %black% left ,Backups count:
+Gui,Add,Text,x164 y202 w40 h25 %black% ,minutes
 Gui,Font,Normal s14  Bold ,Segoe UI
 Gui,Add,Text,x30 y346 w200 h50 Center %red% vNotetext,%sBackupf%
-Gui,Font,Normal s12 %black%,Tahoma
+Gui,Font,Normal s10
 Gui,Add,Edit,x265 y200 w185 h103 %black% r4 1024 Lowercase Multi Border readonly 64 vextsediVar gextsEdit,%sExts%
-Gui,Font,Normal s9 %black%
+Gui,Font,
 Gui,Add,Text,x268 y175 w140 h20 %black% -Wrap,File extensions to backup:
 Gui,Add,Button,x335 y290 w45 h25  vEDbtnvar gextsEDbtn,Edit
-Gui,Add,Button,x270 y290 w45 h25 disabled vEDbtnokvar gextsEDokbtn,Ok
-Gui,Add,Button,x400 y290 w45 h25 disabled vEDbtncancelvar gextsEDcancelbtn,Cancel
-Gui,Add,Button, x322 y338 w70 h40 center +Disabled vBKvar gBKbtn , Manual Backup
+Gui,Add,Button,x270 y290 w45 h25 disabled  vEDbtnokvar gextsEDokbtn,Ok
+Gui,Add,Button,x400 y290 w45 h25 disabled  vEDbtncancelvar gextsEDcancelbtn,Cancel
+Gui,Add,Button, x322 y344 w70 h34 center +Disabled  vBKvar gBKbtn , Manual Backup
 
 if sPath !=
     GuiControl, Enabled, BKvar
 
-Gui,Add,Checkbox,x33 y298 w100 h20 %black% -Wrap vZipBackupvar gZipBackupcbx,Zip backups?
+Gui,Add,Checkbox,x33 y298 w100 h20 %black% -Wrap  vZipBackupvar gZipBackupcbx,Zip backups?
 
 if (bZipBackup = 1)
     GuiControl,, ZipBackupvar, 1
@@ -306,6 +305,8 @@ BPbtn:
 
 OSPbtn:
 {
+    if (sPath="")
+        Return
     if InStr(FileExist(sPath),"D")
     {
         Run, Explorer /n`,/e`,%sPath%
@@ -320,6 +321,8 @@ OSPbtn:
 
 OBPbtn:
 {
+    if (sDest="")
+        Return
     if InStr(FileExist(sDest),"D")
     {
         Run, Explorer /n`,/e`,%sDest%

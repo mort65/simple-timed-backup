@@ -6,10 +6,10 @@ SetWorkingDir %A_ScriptDir%  ; Ensures a consistent starting directory.
 #SingleInstance, ignore 
 sPath := ""
 sDest := ""
-_sPath:=""
-_sDest:=""
+_sPath := ""
+_sDest := ""
 sCustomDest := ""
-sExts :=""
+sExts := ""
 sBackupt := "Backup is Running!"
 sBackupf := "Backup is Stopped!"
 iBackupCount := 10
@@ -167,7 +167,12 @@ logErrors(sExt,sBackupPath,errCount,bSilent:=true)
 }
 
 trimPath(strPath)
-{   break:=false
+{   
+    if (strPath="")
+    {
+        return strPath
+    }
+    break:=false
     while(break=false)
     {
         break:=true
@@ -318,8 +323,13 @@ if (FileExist("STB_settings.ini"))
     IniRead, sExts, STB_settings.ini, Option , Extensions, "*;"
     IniRead, bZipBackup, STB_settings.ini, Option, Zip Backups , 0
     IniRead, bRecursive, STB_settings.ini, Option, Recursive , 0
-    sPath := StrReplaceVar(_sPath)
-    sDest := StrReplaceVar(_sDest)
+    sPath := StrReplaceVar(trimPath(_sPath))
+    sDest := StrReplaceVar(trimPath(_sDest))
+    sCustomDest := trimPath(sCustomDest)
+    if (sCustomDest<>"" and sCustomDest=sPath) {
+        sCustomDest .="\ST_Backups"
+        IniWrite, %sCustomDest%, STB_settings.ini, History, Last Manual Backup Location
+    }
 }else  {
     sExts:= "*;"
     IniWrite, %sPath%, STB_settings.ini, Paths, Files Location

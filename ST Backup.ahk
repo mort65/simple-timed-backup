@@ -4,19 +4,20 @@ SendMode Input  ; Recommended for new scripts due to its superior speed and reli
 SetWorkingDir %A_ScriptDir%  ; Ensures a consistent starting directory.
 #Persistent 
 #SingleInstance, ignore 
+#NoTrayIcon
+
+#Include Class_CtlColors.ahk
+
 sPath := ""
 sDest := ""
 _sPath := ""
 _sDest := ""
 sCustomDest := ""
 sExts := ""
-sBackupt := "Backup is Running!"
-sBackupf := "Backup is Stopped!"
 iBackupCount := 10
 tInterval := 300000 ; 5 min
 toggle := 0
 sCurrentTime :=""
-bIsEDExtsenabled:=-1
 bCopyallExts:=false
 bRecursive:=false
 red:="c0xe1256b"
@@ -24,9 +25,12 @@ blue:="c0x056bed"
 bZipBackup := 0
 errIcon := 16
 infoIcon := 64
-curVersion:=1.0
+curVersion:=1.1
 myName:="Simple Timed Backup"
 myTitle:=myName . " " . curVersion
+bLogVarEnabled := False
+
+_font:="Tahoma"
 
 IsEmpty(Dir){
    Loop %Dir%\*.*, 0, 1
@@ -147,8 +151,9 @@ logErrors(sExt,sBackupPath,errCount,bSilent:=true)
         FileDelete, %sBackupLogPath%       
         FileAppend ,*.%sExt% Backup: in %sCurrentTime%,%sBackupLogPath%
         mainStatusBarVar_TT := sBackupPath
-        
-        SB_SetText(A_Tab curTime . " Backup: """ . trimPath(shrinkString(sBackupPath,70,"m")) . """",1,1)
+        strLog := "Backup: """ . trimPath(shrinkString(sBackupPath,70,"m")) . """"
+        SB_SetText(A_Tab  . curTime . " " . strLog,1,1)
+        logEditAdd(strLog)
     } else {
         if FileExist(sMainLogPath)
         {
@@ -158,6 +163,9 @@ logErrors(sExt,sBackupPath,errCount,bSilent:=true)
             FileAppend ,%sNow% warning! `, extension:%sExt% `, source:%sPath%\ `, destination:%sBackupPath%\, %sMainLogPath%
             FileAppend ,`n%sNow% can`t copy %errCount% file(s)!
         }
+        strLog := "Error: Cannot copy " . errCount " files!"
+        ;SB_SetText(A_Tab  . curTime . " " . strLog,1,1)
+        logEditAdd(strLog)
         if (bSilent=true)
         {
             return
@@ -326,6 +334,7 @@ if (FileExist("STB_settings.ini"))
     IniRead, sExts, STB_settings.ini, Option , Extensions, "*;"
     IniRead, bZipBackup, STB_settings.ini, Option, Zip Backups , 0
     IniRead, bRecursive, STB_settings.ini, Option, Recursive , 0
+    IniRead, bLogVarEnabled, STB_settings.ini, Option, Show log , 0
     sPath := StrReplaceVar(trimPath(_sPath))
     sDest := StrReplaceVar(trimPath(_sDest))
     sCustomDest := trimPath(sCustomDest)
@@ -344,57 +353,40 @@ if (FileExist("STB_settings.ini"))
     IniWrite, %sExts%, STB_settings.ini, Option, Extensions
     IniWrite, %bZipBackup%, STB_settings.ini, Option, Zip Backups
     IniWrite, %bRecursive%, STB_settings.ini, Option, Recursive
+    IniWrite, %bLogVarEnabled%, STB_settings.ini, Option, Show log
 }
 
 Hotkey, ^!x, ExitSub
 OnExit, ExitSub
 
 Gui +LastFound
-;Gui, -theme
-;WinSet, Transparent, 254
 GUI, -ToolWindow
 Gui, +CAPTION
 GUI, -MaximizeBox
-Gui, Margin, 0, 0
-Gui,Font, 
-;Gui, Add, GroupBox, x8 y4 w486 h466,
-gui,font,italic s8
-Gui,Add,Edit,x110 y46 w260 h22 %black%  ReadOnly  vSLedit,
+Gui,Font, normal s8, %_font%
+Gui,Add,Text,x5 y12 w85 %black% left, Files to Backup
+Gui,Add,Text,x5 y47 w85 %black% left, Backups Location
+Gui,Add,Edit,x95 y10 w332 h30 HwndHSLedit r1 %black%  ReadOnly  vSLedit gRevertSLeditColor,
 GuiControl,, SLedit, %sPath%
-Gui,Add,Edit,x110 y118 w260 h22 %black% ReadOnly  vBLedit,
-gui,font,
+Gui,Add,Edit,x95 y45 w332 h30 HwndHBLedit r1 %black% ReadOnly  vBLedit gRevertBLeditColor,
+Gui,Font, s8 normal, %_font%
 GuiControl,, BLedit, %sDest%
-Gui,Add,Button,x378 y46 w50 h22 vSPvar gSPbtn,Change
-Gui,Add,Button,x378 y118 w50 h22  vBPvar gBPbtn,Change
-Gui, Add, Button, x436 y46 w50 h22  vOSPvar gOSPbtn, Open
-Gui, Add, Button, x436 y118 w50 h22  vOBPvar gOBPbtn, Open
-Gui,Add,Text,x16 y48 w90 h13 %black% left,Files to Backup:
-Gui,Add,Text,x16 y120 w90 h13 %black% left ,Backups Location:
-Gui,Add,Edit,x120 y188 w38 h24 %black% Number ReadOnly  vBIedit gBIedit
+Gui,Add,Button,x437 y9 w30 h23 r1 center vSPvar gSPbtn,...
+Gui,Add,Button,x437 y44 w30 h23 r1 center vBPvar gBPbtn,...
+Gui,Add, GroupBox, x5 y80 w310 h101, Backup Options
+Gui,Add,Text,x10 y97 w80 h13 left  %black%  ,Backup every
+Gui,Add,Edit,x85 y95 w70 h18 %black% Number ReadOnly  vBIedit gBIedit
 mInterval := (tInterval/60000)
 Gui,Add,UpDown, 0x20  Range1-720 ,%mInterval%,vBIud
-Gui,Add,Edit,x120 y224 w38 h24 %black% Number ReadOnly  vBCedit gBCedit
+Gui,Add,Text,x10 y116 w80 h13 %black% left ,Backup count
+
+Gui,Add,Edit,x85 y114 w70 h18 %black% Number ReadOnly  vBCedit gBCedit
 Gui,Add,UpDown, 0x20  Range1-100,%iBackupCount%,vBCud
-Gui,Add,Button,x80 y410 w110 h40 center vACvar gACbtn,Activate
-Gui,Add,Button,x302 y410 w110 h40 +Disabled vDEvar gDEbtn,Deactivate
-Gui,Add,Text,x33 y192 w80 h13 %black% left ,Backup every:
-Gui,Add,Text,x164 y192 w40 h25 %black% ,minutes
-Gui,Add,Text,x33 y228 w80 h13 %black% left ,Backups count:
-Gui,Font,Normal s14  Bold ,Segoe UI
-Gui,Add,Text,x30 y348 w200 h50 Center %red% vNotetext,%sBackupf%
-Gui,Font,Normal s10
-Gui,Add,Edit,x265 y200 w185 h103 %black% r4 1024 Lowercase Multi Border readonly 64 vextsediVar gextsEdit,%sExts%
-Gui,Font,
-Gui,Add,Text,x268 y175 w140 h20 %black% -Wrap,File extensions to backup:
-Gui,Add,Button,x335 y290 w45 h25  vEDbtnvar gextsEDbtn,Edit
-Gui,Add,Button,x270 y290 w45 h25 disabled  vEDbtnokvar gextsEDokbtn,Ok
-Gui,Add,Button,x400 y290 w45 h25 disabled  vEDbtncancelvar gextsEDcancelbtn,Cancel
-Gui,Add,Button, x322 y344 w70 h34 center +Disabled  vBKvar gBKbtn , Manual Backup
 
-if sPath !=
-    GuiControl, Enabled, BKvar
+Gui,Add, GroupBox, x10 y134 w150 h41, Backup these file types
+Gui,Add,Edit,x15 y150 w140 h20 %black% Lowercase vextsediVar gextsEdit,%sExts%
 
-Gui,Add,Checkbox,x33 y264 w100 h20 %black% -Wrap  vZipBackupvar gZipBackupcbx,Zip backups?
+Gui,Add,Checkbox,x166 y97 w140 h20 %black% -Wrap  vZipBackupvar gZipBackupcbx,Zip backups
 
 if (bZipBackup = 1)
 {
@@ -405,7 +397,7 @@ else
     GuiControl,, ZipBackupvar, 0
 }
 
-Gui,Add,Checkbox,x33 y300 w100 h20 %black% -Wrap  vRecursiveVar gRecursivecbx,Recursive?
+Gui,Add,Checkbox,x166 y119 w140 h20 %black% -Wrap  vRecursiveVar gRecursivecbx,Recursive
 
 if (bRecursive = 1)
 {
@@ -416,7 +408,35 @@ else
     GuiControl,, RecursiveVar, 0
 }
 
-Gui, Add, StatusBar,gmainStatusBar vmainStatusBarVar,
+Gui,Add,Button, x165 y139 w147 h35 center +Disabled  vBKvar gBKbtn , Manual Backup
+
+Gui,Add,Button,x320 y97 w147 h35 +Disabled vDEvar gDEbtn,Deactivate
+Gui,Add,Button,x320 y139 w147 h35 center vACvar gACbtn,Activate
+Gui,Font, s8 normal, %_font%
+Gui,Add, Checkbox, x5 y182 vShowLogcbx gToggleLogcbx, Show Log
+
+if sPath !=
+    GuiControl, Enabled, BKvar
+
+Gui,Font, s8 normal, %_font%
+Gui, Add, StatusBar,gmainStatusBar vmainStatusBarVar,Ready
+Gui,Font, s7 , Lucida Console
+Gui,add, edit, x9 y202 w468 r9 left ReadOnly vLogEditVar gLogEdit
+Gui,Font, s8 normal, %_font%
+
+if (bLogVarEnabled=False)
+{
+    GuiControl,, ShowLogcbx, 0
+    GuiControl, Hide, LogEditVar
+    Gui,Show, h224,%myTitle%
+}
+else
+{
+    GuiControl,, ShowLogcbx, 1
+    GuiControl, Show, LogEditVar
+    Gui,Show, h334,%myTitle%
+  
+}
 
 ;Tooltips
 SLedit_TT := "The source folder."
@@ -430,14 +450,14 @@ extsediVar_TT := "Extensions are separated by `;`n* means any extension"
 BKvar_TT := "Takes a manual backup inside the selected folder."
 ZipBackupvar_TT := "Toggles the compression of backups."
 RecursiveVar_TT := "Toggles backup for files in subfolders."
-BIedit_TT := "Automated backups will be created at the selected interval."
+BIedit_TT := "Automated backups will be created after the selected minutes."
 EDbtnvar_TT := "Edit what file types to backup."
 mainStatusBarVar_TT := ""
-;Gui, -theme
-;Gui,Font,Normal s11
-Gui,Font,
-Gui,Show,x390 y122 w500 h500 ,%myTitle%
+LogEditVar_TT := ""
+
 OnMessage(0x200, "WM_MOUSEMOVE")
+OnMessage(0x0203, "WM_LBUTTONDBLCLK")
+
 Return
 
 WM_MOUSEMOVE()
@@ -464,6 +484,51 @@ WM_MOUSEMOVE()
     return
 }
 
+WM_LBUTTONDBLCLK(wParam, lParam)
+{
+    if(a_guicontrol = "SLedit") {
+        GuiControlGet, strPath,, SLedit
+        if InStr(FileExist(strPath),"D")
+        {
+            Run, Explorer /n`,/e`,%strPath%
+        }
+    }
+    if(a_guicontrol = "BLedit") {
+        GuiControlGet, strPath,, BLedit
+        if InStr(FileExist(strPath),"D")
+        {
+            Run, Explorer /n`,/e`,%strPath%
+        }
+    }
+    if(a_guicontrol = "LogEditVar") {
+        GuiControlGet, strPath,, BLedit
+        if InStr(FileExist(strPath),"D")
+        {   logPath := strPath . "\stbackup_log.txt"
+            if (FileExist(logPath))
+            {
+                SplitPath, logPath,,,,fName 
+                Run,% "notepad.exe " . logPath
+                If WinExist(fName)
+                    WinActivate 
+            }
+        }
+
+    }
+    return
+}
+
+RevertSLeditColor:
+{
+    CtlColors.Change(HSLedit, "", "")
+    Return
+}
+
+RevertBLeditColor:
+{
+    CtlColors.Change(HBLedit, "", "")
+    Return
+}
+
 mainStatusBar:
 {
     global mainStatusBarVar_TT
@@ -477,53 +542,37 @@ mainStatusBar:
     return
 }
 
-extsEDcancelbtn:
+ToggleLogcbx:
 {
-    GuiControl,,extsediVar, %sExts%
-    GuiControl, +ReadOnly, extsediVar
-    GuiControl, Disabled, EDbtncancelvar
-    GuiControl, Disabled, EDbtnokvar
-    GuiControl, Enabled, EDbtnvar
-    bIsEDExtsenabled := bIsEDExtsenabled * -1
-    Return
-}
-    
-extsEDbtn:
-{
-    if(bIsEDExtsenabled = -1)
+    Global bLogVarEnabled
+    GuiControlGet, bLogVarEnabled, , ShowLogcbx
+    If (bLogVarEnabled=False)
     {
-        GuiControl, -ReadOnly, extsediVar
-        GuiControl, Enabled, EDbtncancelvar
-        GuiControl, Enabled, EDbtnokvar
-        GuiControl, Disabled, EDbtnvar
-        bIsEDExtsenabled := bIsEDExtsenabled * -1
-        return
-    }else  {
-        GuiControl, +ReadOnly, extsediVar
-        GuiControl, Disabled, EDbtncancelvar
-        GuiControl, Disabled, EDbtnokvar
-        GuiControl, Enabled, EDbtnvar
-        bIsEDExtsenabled := bIsEDExtsenabled * -1
-        return
+      GuiControl, Hide, LogEditVar
+      Gui,Show, h224
     }
+    Else
+    {
+      GuiControl, Show, LogEditVar
+      Gui,Show, h334
+      
+    }
+    IniWrite, %bLogVarEnabled%, STB_settings.ini, Option, Show log
+    return
 }
 
-extsEDokbtn:
+logEdit:
 {
-    GuiControlGet, Extstring ,, extsediVar,
-    trimExts(Extstring)
-    sExts := Extstring
-    If InStr(sExts, "*")
-        sExts := "*;"
-    if sExts =
-        sExts := "*;"
-    GuiControl,,extsediVar, %sExts%
-    GuiControl, +ReadOnly, extsediVar
-    GuiControl, Disabled, EDbtncancelvar
-    GuiControl, Disabled, EDbtnokvar
-    GuiControl, Enabled, EDbtnvar
-    bIsEDExtsenabled := bIsEDExtsenabled * -1
-    Return
+    return
+}
+
+logEditAdd(strIn)
+{
+     GuiControlGet, sLogEditText ,, LogEditVar
+     FormatTime, curTime, %a_now% T12, [HH:mm:ss]
+     sLogEditText := curTime . " " . strIn . "`r`n" . sLogEditText
+     GuiControl,text, LogEditVar, %sLogEditText%
+    return
 }
 
 SPbtn:
@@ -551,38 +600,6 @@ BPbtn:
     sDest := OutputVar2
     IniWrite, %sDest%, STB_settings.ini, Paths, Backups Location
     Return
-}
-
-OSPbtn:
-{
-    if (sPath="")
-        Return
-    if InStr(FileExist(sPath),"D")
-    {
-        Run, Explorer /n`,/e`,%sPath%
-    }
-    else 
-    {
-        SplashTextOff
-        msgbox,% errIcon,, The path you entered could not be found: %sPath%
-    }
-    return
-}
-
-OBPbtn:
-{
-    if (sDest="")
-        Return
-    if InStr(FileExist(sDest),"D")
-    {
-        Run, Explorer /n`,/e`,%sDest%
-    }
-    else
-    {
-        SplashTextOff
-        msgbox,% errIcon,, The path you entered could not be found: %sDest%
-    }
-    return
 }
 
 BIedit:
@@ -638,7 +655,6 @@ Recursivecbx:
     
 ACbtn:
 {
-    if(bIsEDExtsenabled = 1)
     {
         GuiControl,,extsediVar, %sExts%
     }   
@@ -662,9 +678,10 @@ ACbtn:
         iBackupCount := 10
     }else if (sPVar=0)
      {
-        SplashTextOff
-        msgbox,% errIcon,, The path you entered could not be found: %sPath%
-        return
+     
+        CtlColors.Change(HSLedit, "FFC0C0", "")
+        GuiControl,Focus, SLedit
+        Return
     }
     Else if tInterval not between 1 and 720
     {
@@ -696,10 +713,9 @@ ACbtn:
         }
         if (sDest="")
         {
-            sDest:=sPath
-            sDest.="\ST_Backups"
-            GuiControl,, BLedit, %sDest%
-            IniWrite, %sDest%, STB_settings.ini, Paths, Backups Location
+            CtlColors.Change(HBLedit, "FFC0C0", "")
+            GuiControl,Focus, BLedit
+            Return        
         }
         sDVar :=InStr(FileExist(sDest),"D")
         If (sDVar=0)
@@ -723,13 +739,11 @@ ACbtn:
         GuiControl,Disable,SLedit
         GuiControl,Disable,BLedit
         GuiControl,Disabled,EDbtnvar
-        GuiControl, Disabled, EDbtncancelvar
-        GuiControl, Disabled, EDbtnokvar
         GuiControl, Disabled, ZipBackupvar
         GuiControl, Disabled, RecursiveVar
-        GuiControl,,Notetext,%sBackupt%
-        Gui,Font,Normal s14 Bold %blue% ,Segoe UI
-        GuiControl, Font, Notetext 
+        GuiControl, +ReadOnly, extsediVar
+        SB_SetText(A_Tab  . "Auto backup started.",1,1)
+        logEditAdd("Auto backup started.")
         if(iBkupNum="")
         {
             iBkupNum := 1
@@ -792,16 +806,8 @@ DEbtn:
     GuiControl,Enable,BLedit
     GuiControl,Enable,ZipBackupvar
     GuiControl,Enable,RecursiveVar
-    if(bIsEDExtsenabled = -1)
-    {
-        GuiControl,Enable,EDbtnvar
-    }else  {
-        GuiControl, Enable, EDbtncancelvar
-        GuiControl, Enable, EDbtnokvar
-    }
-    GuiControl,,Notetext,%sBackupf%
-    Gui,Font,Normal s14 Bold %red% ,Segoe UI
-    GuiControl, Font, Notetext 
+    GuiControl, -ReadOnly, extsediVar
+    logEditAdd("Auto backup stopped.")
     sBackupPath = %sDest%\Backup_0
     if(bCopyallExts = false)
     {
@@ -1012,6 +1018,7 @@ ExitSub:
         IniWrite, %sCustomDest%, STB_settings.ini, History, Last Manual Backup Location
         IniWrite, %bZipBackup%, STB_settings.ini, Option, Zip Backups
         IniWrite, %bRecursive%, STB_settings.ini, Option, Recursive
+        IniWrite, %bLogVarEnabled%, STB_settings.ini, Option, Show log
         FormatTime, sNow, %a_now% T12, [yyyy-MM-dd%a_space%HH:mm:ss]
         FileAppend ,`n%sNow% exiting program..., %sLogfullpath%
         sleep, 50

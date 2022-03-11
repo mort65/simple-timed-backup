@@ -6,6 +6,8 @@ SetWorkingDir %A_ScriptDir%  ; Ensures a consistent starting directory.
 #SingleInstance, ignore 
 sPath := ""
 sDest := ""
+_sPath:=""
+_sDest:=""
 sCustomDest := ""
 sExts :=""
 sBackupt := "Backup is Running!"
@@ -220,6 +222,30 @@ bIsParentPath(sParentPath,sChildPath)
     return true
 }
 
+StrReplaceVar(strIn)
+{
+    ;replace the substring between two ? with content of a variable with the same name
+    index:=1
+    break:=false
+    while(break=false) {
+        break:=true
+        ChrIndex:=InStr(strIn,"?",,index,1)
+        if (ChrIndex > 0){
+            nextIndex:=InStr(strIn,"?",,ChrIndex+1,1)
+            if (nextIndex>0) {
+                strVar:=SubStr(strIn,ChrIndex + 1,(nextIndex-ChrIndex)-1)
+                strVar := %strVar%
+                strIn:= StrReplace(SubStr(strIn,1,ChrIndex), "?") . strVar . SubStr(strIn,nextIndex+1)
+                index := nextIndex+1
+                if (index < strLen(strIn) - 1) {
+                    break:=false
+                }
+            }
+        }
+    }
+    return strIn
+}
+
 CopyFiles(sExt,sDestFolder,bRecursive:=false)   
 {
     global sPath
@@ -283,8 +309,8 @@ CopyFiles(sExt,sDestFolder,bRecursive:=false)
 
 if (FileExist("STB_settings.ini"))
 {
-    IniRead, sPath, STB_settings.ini, Paths, Files Location 
-    IniRead, sDest, STB_settings.ini, Paths, Backups Location
+    IniRead, _sPath, STB_settings.ini, Paths, Files Location 
+    IniRead, _sDest, STB_settings.ini, Paths, Backups Location
     IniRead, sCustomDest, STB_settings.ini, History, Last Manual Backup Location
     IniRead, tInterval, STB_settings.ini, Option, Backup Interval , 300000 
     IniRead, iBackupCount, STB_settings.ini, Option, Backups Count , 10
@@ -292,6 +318,8 @@ if (FileExist("STB_settings.ini"))
     IniRead, sExts, STB_settings.ini, Option , Extensions, "*;"
     IniRead, bZipBackup, STB_settings.ini, Option, Zip Backups , 0
     IniRead, bRecursive, STB_settings.ini, Option, Recursive , 0
+    sPath := StrReplaceVar(_sPath)
+    sDest := StrReplaceVar(_sDest)
 }else  {
     sExts:= "*;"
     IniWrite, %sPath%, STB_settings.ini, Paths, Files Location
@@ -604,39 +632,48 @@ ACbtn:
     }else   If (iBackupCount="")
      {
         iBackupCount := 10
-    }else   If (sPVar=0)
+    }else if (sPVar=0)
      {
         SplashTextOff
         msgbox,% errIcon,, The path you entered could not be found: %sPath%
         return
     }
-    Else If tInterval not between 1 and 720
+    Else if tInterval not between 1 and 720
     {
         SplashTextOff
         msgbox,% errIcon,, Your Backup Interval is not within the valid range: 1-720
         return
     }
-    Else If  iBackupCount not between 1 and 100
+    Else if iBackupCount not between 1 and 100
     {
         SplashTextOff
         msgbox,% errIcon,, Your Backup Count is not within the valid range: 1-100
         return
-    }else  {
-        If (sPath=sDest)
+    }else  
+    {
+        if (sPath=sDest)
         {
-            sDest.="\Backups"
+            if (_sPath<>"" and (_sPath=_sDest) and (StrReplaceVar(_sPath)=sPath) and (StrReplaceVar(_sDest)=sDest)) 
+            {
+                _sDest.="\ST_Backups"
+                sDest.="\ST_Backups"
+                IniWrite, %_sDest%, STB_settings.ini, Paths, Backups Location
+            }
+            else {
+                sDest.="\ST_Backups"
+                IniWrite, %sDest%, STB_settings.ini, Paths, Backups Location
+            }
             GuiControl,, BLedit, %sDest%
-            IniWrite, %sDest%, STB_settings.ini, Paths, Backups Location
+            
         }
-        If (sDest="")
+        if (sDest="")
         {
             sDest:=sPath
-            sDest.="\Backups"
+            sDest.="\ST_Backups"
             GuiControl,, BLedit, %sDest%
             IniWrite, %sDest%, STB_settings.ini, Paths, Backups Location
         }
-        DestPattern := sDest
-        sDVar :=InStr(FileExist(DestPattern),"D")
+        sDVar :=InStr(FileExist(sDest),"D")
         If (sDVar=0)
         {
             FileCreateDir, %sDest%
@@ -849,8 +886,12 @@ BKbtn:
     If (sPVar=0)
     {
         SplashTextOff
-        msgbox,% errIcon,, The path you entered could not be found: %sPath%
+        msgbox,% errIcon,, The path could not be found: %sPath%
         return
+    }
+    if (OutputVar3 = sPath)
+    {
+        OutputVar3 .= "\ST_Backups"
     }
     sDVar :=InStr(FileExist(OutputVar3),"D")
     If (sDVar=0)
@@ -860,7 +901,7 @@ BKbtn:
         if(erl<>0)
         {
             SplashTextOff
-            msgbox,% errIcon,, The path you entered could not be created: %OutputVar3%
+            msgbox,% errIcon,, The backup path could not be created: %OutputVar3%
             return
         }
     }
@@ -924,8 +965,18 @@ ExitSub:
         }else  {
             sExts := Extstring
         }
-        IniWrite, %sPath%, STB_settings.ini, Paths, Files Location
-        IniWrite, %sDest%, STB_settings.ini, Paths, Backups Location
+        if (_sPath<>"" and (StrReplaceVar(_sPath) = sPath)) {
+            IniWrite, %_sPath%, STB_settings.ini, Paths, Files Location
+        }
+        else {
+            IniWrite, %sPath%, STB_settings.ini, Paths, Files Location            
+        }
+        if (_sDest<>"" and ((StrReplaceVar(_sDest) = sDest))) {
+            IniWrite, %_sDest%, STB_settings.ini, Paths, Backups Location
+        }
+        else {
+            IniWrite, %sDest%, STB_settings.ini, Paths, Backups Location            
+        }
         IniWrite, %tInterval%, STB_settings.ini, Option, Backup Interval 
         IniWrite, %iBackupCount%, STB_settings.ini, Option, Backups Count 
         IniWrite, %iBkupNum%, STB_settings.ini, History, Next Backup Number

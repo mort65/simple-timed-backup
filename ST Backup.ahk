@@ -151,7 +151,7 @@ logErrors(sExt,sBackupPath,errCount,bSilent:=true)
         FileDelete, %sBackupLogPath%       
         FileAppend ,*.%sExt% Backup: in %sCurrentTime%,%sBackupLogPath%
         mainStatusBarVar_TT := sBackupPath
-        strLog := "Backup: """ . trimPath(shrinkString(sBackupPath,70,"m")) . """"
+        strLog := "Backup: """ . trimPath(shrinkString(sBackupPath,62,"m")) . """"
         SB_SetText(A_Tab  . curTime . " " . strLog,1,1)
         logEditAdd(strLog)
     } else {

@@ -466,6 +466,14 @@ WM_MOUSEMOVE()
 
 mainStatusBar:
 {
+    global mainStatusBarVar_TT
+    if (mainStatusBarVar_TT<>"")
+    {
+        if InStr(FileExist(mainStatusBarVar_TT),"D")
+        {
+            Run, Explorer /n`,/e`,%mainStatusBarVar_TT%
+        }
+    }
     return
 }
 

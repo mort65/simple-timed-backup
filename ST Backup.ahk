@@ -17,16 +17,14 @@ sCurrentTime :=""
 bIsEDExtsenabled:=-1
 bCopyallExts:=false
 bRecursive:=false
-black:="c0x0"
-lightblue:="c0x066dd"
-maincolor:="bad8cf" 
 red:="c0xe1256b"
 blue:="c0x056bed"
-lightgrey:="bad8cf"
-lightgreen:="d0e970"
 bZipBackup := 0
 errIcon := 16
 infoIcon := 64
+curVersion:=1.0
+myName:="Simple Timed Backup"
+myTitle:=myName . " " . curVersion
 
 IsEmpty(Dir){
    Loop %Dir%\*.*, 0, 1
@@ -118,6 +116,7 @@ logErrors(sExt,sBackupPath,errCount,bSilent:=true)
     sBackupLogPath := sBackupPath
     sBackupLogPath .= "\stbackup_log.txt"
     FormatTime, sNow, %a_now% T12, [yyyy-MM-dd%a_space%HH:mm:ss]
+    FormatTime, curTime, %a_now% T12, [HH:mm]
     if (errCount < 0)
     {
         ;No file from Source folder copied without any error.
@@ -144,6 +143,7 @@ logErrors(sExt,sBackupPath,errCount,bSilent:=true)
         }
         FileDelete, %sBackupLogPath%       
         FileAppend ,*.%sExt% Backup: in %sCurrentTime%,%sBackupLogPath%
+        SB_SetText(A_Tab curTime . " Backup: """ . trimPath(shrinkString(sBackupPath,70,"m")) . """",1,1)
     } else {
         if FileExist(sMainLogPath)
         {
@@ -178,9 +178,37 @@ trimPath(strPath)
         {
             strPath:=substr(strPath,1,StrLen(strPath)-1)
             break:=false
-         }
+        }
+        if (SubStr(strPath,1,1) = " ") 
+        {
+            strPath:=substr(strPath,2)
+            break:=false
+        }
     }
     return strPath
+}
+
+shrinkString(strIn,maxLength,side)
+{
+    StringLower,side,side
+    if (StrLen(strIn) > maxLength) {
+        if (side="l") {
+            StringTrimLeft,strIn,strIn,StrLen(strIn) - maxLength
+            strIn := "..." . strIn
+        }
+        else if (side="m") {
+            tempStr:=SubStr(strIn,StrLen(strIn)//2)
+            StringTrimLeft,tempStr,tempStr,StrLen(strIn) - maxLength
+            if tempStr=
+                tempStr:=SubStr(strIn,0) 
+            strIn := SubStr(strIn,1, min(StrLen(strIn)//2-1,maxLength-1)) . "..." . tempStr
+        }
+        else if (side="r") {
+             StringTrimRight,strIn,strIn,StrLen(strIn) - maxLength
+             strIn := strIn . "..."
+             }
+       }
+        return strIn
 }
 
 bIsParentPath(sParentPath,sChildPath)
@@ -280,15 +308,15 @@ if (FileExist("STB_settings.ini"))
 Hotkey, ^!x, ExitSub
 OnExit, ExitSub
 
-Gui, +LastFound
+Gui +LastFound
 ;Gui, -theme
-WinSet, Transparent, 254
+;WinSet, Transparent, 254
 GUI, -ToolWindow
 Gui, +CAPTION
 GUI, -MaximizeBox
 Gui, Margin, 0, 0
 Gui,Font, 
-Gui, Add, GroupBox, x8 y4 w486 h486,
+;Gui, Add, GroupBox, x8 y4 w486 h466,
 gui,font,italic s8
 Gui,Add,Edit,x110 y46 w260 h22 %black%  ReadOnly  vSLedit,
 GuiControl,, SLedit, %sPath%
@@ -361,8 +389,11 @@ ZipBackupvar_TT := "Toggles the compression of backups."
 RecursiveVar_TT := "Toggles backup for files in subfolders."
 BIedit_TT := "Automated backups will be created at the selected interval."
 EDbtnvar_TT := "Edit what file types to backup."
-
-Gui,Show,x390 y122 w500 h500 ,Simple Timed Backup
+;Gui, -theme
+;Gui,Font,Normal s11
+Gui, Add, StatusBar,,
+Gui,Font,
+Gui,Show,x390 y122 w500 h500 ,%myTitle%
 OnMessage(0x200, "WM_MOUSEMOVE")
 Return
 

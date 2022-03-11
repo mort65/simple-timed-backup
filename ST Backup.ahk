@@ -113,6 +113,7 @@ logErrors(sExt,sBackupPath,errCount,bSilent:=true)
 {
     global sPath
     global sDest
+    global mainStatusBarVar_TT
     sMainLogPath := sDest
     sMainLogPath .= "\stbackup_log.txt"
     sBackupLogPath := sBackupPath
@@ -145,6 +146,8 @@ logErrors(sExt,sBackupPath,errCount,bSilent:=true)
         }
         FileDelete, %sBackupLogPath%       
         FileAppend ,*.%sExt% Backup: in %sCurrentTime%,%sBackupLogPath%
+        mainStatusBarVar_TT := sBackupPath
+        
         SB_SetText(A_Tab curTime . " Backup: """ . trimPath(shrinkString(sBackupPath,70,"m")) . """",1,1)
     } else {
         if FileExist(sMainLogPath)
@@ -413,6 +416,8 @@ else
     GuiControl,, RecursiveVar, 0
 }
 
+Gui, Add, StatusBar,gmainStatusBar vmainStatusBarVar,
+
 ;Tooltips
 SLedit_TT := "The source folder."
 BLedit_TT := "The destination folder for storing backups."
@@ -427,9 +432,9 @@ ZipBackupvar_TT := "Toggles the compression of backups."
 RecursiveVar_TT := "Toggles backup for files in subfolders."
 BIedit_TT := "Automated backups will be created at the selected interval."
 EDbtnvar_TT := "Edit what file types to backup."
+mainStatusBarVar_TT := ""
 ;Gui, -theme
 ;Gui,Font,Normal s11
-Gui, Add, StatusBar,,
 Gui,Font,
 Gui,Show,x390 y122 w500 h500 ,%myTitle%
 OnMessage(0x200, "WM_MOUSEMOVE")
@@ -456,6 +461,11 @@ WM_MOUSEMOVE()
     RemoveToolTip:
     SetTimer, RemoveToolTip, Off
     ToolTip
+    return
+}
+
+mainStatusBar:
+{
     return
 }
 

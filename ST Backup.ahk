@@ -471,7 +471,7 @@ else
 
 Gui,Add,Button, x165 y139 w147 h35 center +Disabled  vBKvar gBKbtn , Manual Backup...
 
-Gui,Add,Button,x320 y97 w147 h35 +Disabled vDEvar gDEbtn,Deactivate
+Gui,Add,Button,x320 y92 w147 h35 +Disabled vDEvar gDEbtn,Deactivate
 Gui,Add,Button,x320 y139 w147 h35 center vACvar gACbtn,Activate
 Gui,Font, s8 normal, %_font%
 Gui,Add, Checkbox, x9 y184 vShowLogcbx gToggleLogcbx, Show Log

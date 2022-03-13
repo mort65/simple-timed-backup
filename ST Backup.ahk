@@ -509,7 +509,7 @@ SPvar_TT := "Change the source folder."
 BPvar_TT := "Change the destination folder."
 BCedit_TT := "How many backups should be created before overwriting previous backups."
 ACvar_TT := "First, a backup will be created inside the ""backup_0"" folder.`nThen automated backups will be created at the selected interval."
-DEvar_TT := "First, a backup will be created inside the ""backup_0"" folder.`nThen creating automated backups will be stopped."
+DEvar_TT := "First, a backup will be created inside the ""backup_00"" folder.`nThen creating automated backups will be stopped."
 extsediVar_TT := "Extensions are separated by `;`n* means any extension"
 BKvar_TT := "Takes a manual backup inside the selected folder."
 ZipBackupvar_TT := "Toggles the compression of backups."
@@ -903,7 +903,7 @@ DEbtn:
     GuiControl,Enable,ZipBackupvar
     GuiControl,Enable,RecursiveVar
     GuiControl, -ReadOnly, extsediVar
-    sBackupPath := sDest . "\Backup_0"
+    sBackupPath := sDest . "\Backup_00"
     sBackupLogPath := sBackupPath . "\stbackup_log.txt"
     FileDelete, %sBackupLogPath%
     FileRemoveDir, %sBackupPath%, 1
@@ -932,7 +932,7 @@ DEbtn:
         }
     }       
     If (bZipBackup = 1) {
-        zipBackup(sDest "\Backup_0")
+        zipBackup(sDest "\Backup_00")
     }
     Gosub, ToggleBackup
     return

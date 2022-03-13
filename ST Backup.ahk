@@ -695,25 +695,6 @@ LSedit:
     IniWrite, %iMaxLogSize%, STB_settings.ini, Option, Max Log Size
     Return
 }
-
-/*
-BCud:
-{
-    GuiControlGet , BCud
-    iBackupCount := BCud
-    IniWrite, %iBackupCount%, STB_settings.ini, Option, Backups Count
-    Return
-}
-
-BIud:
-{
-    GuiControlGet , BIud
-    tInterval := BIud*60000
-    IniWrite, %tInterval%, STB_settings.ini, Option, Backups Interval 
-    Return
-}
-*/
-
 extsEdit:
 {
     Return

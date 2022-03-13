@@ -166,11 +166,11 @@ logErrors(sExt,sBackupPath,errCount,bSilent:=true)
         logEditAdd(strLog)
         if (FileExist(sBackupLogPath)) 
         {
-            FileAppend ,`n*.%sExt% Backup: in %sCurrentTime%,%sBackupLogPath%
+            FileAppend ,`n*.%sExt% Backup: %sCurrentTime%,%sBackupLogPath%
         }
         else
         {
-            FileAppend ,*.%sExt% Backup: in %sCurrentTime%,%sBackupLogPath%
+            FileAppend ,*.%sExt% Backup: %sCurrentTime%,%sBackupLogPath%
         } 
     } 
     else 
@@ -695,6 +695,7 @@ LSedit:
     IniWrite, %iMaxLogSize%, STB_settings.ini, Option, Max Log Size
     Return
 }
+
 extsEdit:
 {
     Return

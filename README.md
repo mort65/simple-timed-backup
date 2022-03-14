@@ -5,4 +5,5 @@ Backups from files in a directory at a time interval.
 
 
 Mod DB:
+
 <a href="https://www.moddb.com/mods/simple-timed-backup" title="View Simple Timed Backup on Mod DB" target="_blank"><img src="https://media.moddb.com/images/global/moddb.png" alt="Simple Timed Backup" /></a>

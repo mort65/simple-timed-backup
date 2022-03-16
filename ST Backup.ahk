@@ -34,6 +34,9 @@ winHeight_LogHide := 228
 winHeight_LogShow := 328
 iMaxLogSize := 500 ;kb
 
+;DllCall("AllocConsole")
+;WinHide % "ahk_id " DllCall("GetConsoleWindow", "ptr")
+
 
 _font:="Tahoma"
 
@@ -65,6 +68,8 @@ Zip(sDir, sZip)
     ;ToolTip
 }
 
+
+
 Unz(sZip, sUnz)
 {
     fso := ComObjCreate("Scripting.FileSystemObject")
@@ -83,6 +88,17 @@ Unz(sZip, sUnz)
     ;ToolTip
 }
 
+psZip(inPath,outPath)
+{
+    RunWait PowerShell.exe -Command Compress-Archive -LiteralPath '%inPath%' -CompressionLevel Optimal -DestinationPath '%outPath%',, Hide UseErrorLevel
+    Return ErrorLevel
+}
+psUnzip(inPath,outPath)
+{
+    RunWait PowerShell.exe -Command Expand-Archive -LiteralPath '%inPath%' -DestinationPath '%outPath%',, Hide UseErrorLevel
+    Return ErrorLevel
+}
+
 zipBackup(sPath)
 {
     if InStr(FileExist(sPath), "D") {
@@ -95,11 +111,17 @@ zipBackup(sPath)
     }
     SplitPath, sPath, sName, sParent
     FileDelete, %sParent%\%sName%.zip
-        FileDelete, %sPath%\%sName%.zip
-    Zip(sPath , sParent "\" sName ".zip")
-    FileRemoveDir, %sPath%, 1
-    FileCreateDir, %sPath%
-    FileMove, %sParent%\%sName%.zip,%sPath%,1
+    FileDelete, %sPath%\%sName%.zip
+    sOut := sParent "\" sName ".zip"
+    RunWait PowerShell.exe -Command (Compress-Archive -LiteralPath '%sPath%' -CompressionLevel Optimal -DestinationPath '%sOut%'); if ($?) { (Remove-Item -force '%sPath%' -recurse -Confirm:$False); (New-Item -force -Path '%sPath%'  -ItemType Directory); (move-Item '%sOut%' '%sPath%' -force); },, Hide UseErrorLevel
+    if (ErrorLevel = "ERROR")
+    {
+        Zip(sPath , sParent "\" sName ".zip")      
+        FileRemoveDir, %sPath%, 1
+        FileCreateDir, %sPath%
+        FileMove, %sParent%\%sName%.zip,%sPath%,1
+    }
+    Return
 }
 
 trimExts(ByRef sExtensions)

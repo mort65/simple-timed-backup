@@ -113,7 +113,7 @@ zipBackup(sPath)
     FileDelete, %sParent%\%sName%.zip
     FileDelete, %sPath%\%sName%.zip
     sOut := sParent "\" sName ".zip"
-    RunWait PowerShell.exe -Command (Compress-Archive -LiteralPath '%sPath%' -CompressionLevel Optimal -DestinationPath '%sOut%'); if ($?) { (Remove-Item -force '%sPath%' -recurse -Confirm:$False); (New-Item -force -Path '%sPath%'  -ItemType Directory); (move-Item '%sOut%' '%sPath%' -force); },, Hide UseErrorLevel
+    Run PowerShell.exe -Command (Compress-Archive -LiteralPath '%sPath%' -CompressionLevel Optimal -DestinationPath '%sOut%'); if ($?) { (Remove-Item -force '%sPath%' -recurse -Confirm:$False); (New-Item -force -Path '%sPath%'  -ItemType Directory); (move-Item '%sOut%' '%sPath%' -force); },, Hide UseErrorLevel
     if (ErrorLevel = "ERROR")
     {
         Zip(sPath , sParent "\" sName ".zip")      

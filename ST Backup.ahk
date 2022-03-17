@@ -224,7 +224,7 @@ logErrors(sExt,sBackupPath,errCount,bSilent:=true)
             FileAppend ,`n%sNow% backup: `, extension:%sExt% `, source:%sPath%\ `, destination:%sBackupPath%\, %sMainLogPath%
         }           
         strLog := shrinkString("*." . sExt . " Backup: """ . trimPath(sBackupPath) . """",73,"r")
-        SB_SetText(A_Tab  . curTime . " " . strLog,1,1)
+        ;SB_SetText(A_Tab  . curTime . " " . strLog,1,1)
         logEditAdd(strLog)
         if (FileExist(sBackupLogPath)) 
         {
@@ -983,7 +983,7 @@ ToggleBackup:
         SetTimer, Backup, %tInterval%
     }else  {
         logEditAdd("Auto backup stopped.")
-        ;SB_SetText(A_Tab  . "Auto backup stopped.",1,1)
+        SB_SetText(A_Tab  . "Auto backup stopped.",1,1)
         FormatTime, sNow, %a_now% T12, [yyyy-MM-dd%a_space%HH:mm:ss]
         sMainLogPath := sDest . sMainLogName
         if FileExist(sMainLogPath)

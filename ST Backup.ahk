@@ -29,14 +29,9 @@ infoIcon := 64
 curVersion:=1.1
 myName:="Simple Timed Backup"
 myTitle:=myName . " " . curVersion
-bLogVarEnabled := False
-winHeight_LogHide := 228
-winHeight_LogShow := 328
+_WinH := 328
+_WinW := 478
 iMaxLogSize := 500 ;kb
-
-;DllCall("AllocConsole")
-;WinHide % "ahk_id " DllCall("GetConsoleWindow", "ptr")
-
 
 _font:="Tahoma"
 
@@ -44,6 +39,53 @@ IsEmpty(Dir){
    Loop %Dir%\*.*, 0, 1
       return 0
    return 1
+}
+
+AutoSize(DimSize, cList*) {
+    Static cInfo := {}
+    Local
+
+    If (DimSize = "reset") {
+        Return cInfo := {}
+    }
+
+    For i, ctrl in cList {
+        ctrlID := A_Gui . ":" . ctrl
+        If (cInfo[ctrlID].x = "") {
+            GuiControlGet i, %A_Gui%: Pos, %ctrl%
+            MMD := InStr(DimSize, "*") ? "MoveDraw" : "Move"
+            fx := fy := fw := fh := 0
+            For i, dim in (a := StrSplit(RegExReplace(DimSize, "i)[^xywh]"))) {
+                If (!RegExMatch(DimSize, "i)" . dim . "\s*\K[\d.-]+", f%dim%)) {
+                    f%dim% := 1
+                }
+            }
+
+            If (InStr(DimSize, "t")) {
+                GuiControlGet hWnd, %A_Gui%: hWnd, %ctrl%
+                hWndParent := DllCall("GetParent", "Ptr", hWnd, "Ptr")
+                VarSetCapacity(RECT, 16, 0)
+                DllCall("GetWindowRect", "Ptr", hWndParent, "Ptr", &RECT)
+                DllCall("MapWindowPoints", "Ptr", 0, "Ptr"
+                , DllCall("GetParent", "Ptr", hWndParent, "Ptr"), "Ptr", &RECT, "UInt", 1)
+                ix -= (NumGet(RECT, 0, "Int") * 96) // A_ScreenDPI
+                iy -= (NumGet(RECT, 4, "Int") * 96) // A_ScreenDPI
+            }
+
+            cInfo[ctrlID] := {x: ix, fx: fx, y: iy, fy: fy, w: iw, fw: fw, h: ih, fh: fh, gw: A_GuiWidth, gh: A_GuiHeight, a: a, m: MMD}
+
+        } Else If (cInfo[ctrlID].a.1) {
+            dgx := dgw := A_GuiWidth - cInfo[ctrlID].gw
+            dgy := dgh := A_GuiHeight - cInfo[ctrlID].gh
+
+            Options := ""
+            For i, dim in cInfo[ctrlID]["a"] {
+                Options .= dim . (dg%dim% * cInfo[ctrlID]["f" . dim] + cInfo[ctrlID][dim]) . A_Space
+            }
+
+            GuiControl, % A_Gui ":" cInfo[ctrlID].m, % ctrl, % Options
+        }
+    }
 }
 
 Zip(sDir, sZip)
@@ -148,7 +190,6 @@ logErrors(sExt,sBackupPath,errCount,bSilent:=true)
 {
     global sPath
     global sDest
-    global mainStatusBarVar_TT
     Global sBackupLogPath
     Global sMainLogName
     Global iMaxLogSize
@@ -182,8 +223,7 @@ logErrors(sExt,sBackupPath,errCount,bSilent:=true)
             FileAppend ,%sNow% backup started..., %sMainLogPath%
             FileAppend ,`n%sNow% backup: `, extension:%sExt% `, source:%sPath%\ `, destination:%sBackupPath%\, %sMainLogPath%
         }           
-        mainStatusBarVar_TT := sBackupPath
-        strLog := shrinkString("*." . sExt " Backup: """ . trimPath(sBackupPath) . """",73,"r")
+        strLog := shrinkString("*." . sExt . " Backup: """ . trimPath(sBackupPath) . """",73,"r")
         SB_SetText(A_Tab  . curTime . " " . strLog,1,1)
         logEditAdd(strLog)
         if (FileExist(sBackupLogPath)) 
@@ -405,7 +445,6 @@ if (FileExist("STB_settings.ini"))
     IniRead, sExts, STB_settings.ini, Option , Extensions, "*;"
     IniRead, bZipBackup, STB_settings.ini, Option, Zip Backups , 0
     IniRead, bRecursive, STB_settings.ini, Option, Recursive , 0
-    IniRead, bLogVarEnabled, STB_settings.ini, Option, Show log , 0
     sPath := StrReplaceVar(trimPath(_sPath))
     sDest := StrReplaceVar(trimPath(_sDest))
     if (sPath<>"") 
@@ -435,17 +474,17 @@ if (FileExist("STB_settings.ini"))
     IniWrite, %sExts%, STB_settings.ini, Option, Extensions
     IniWrite, %bZipBackup%, STB_settings.ini, Option, Zip Backups
     IniWrite, %bRecursive%, STB_settings.ini, Option, Recursive
-    IniWrite, %bLogVarEnabled%, STB_settings.ini, Option, Show log
 }
 
 Hotkey, ^!x, ExitSub
 OnExit, ExitSub
 
 Gui +LastFound
-GUI, -ToolWindow
+Gui, -ToolWindow
 Gui, +CAPTION
-GUI, -MaximizeBox
-GUI, Margin,11,
+Gui, -MaximizeBox
+Gui, +Resize +MinSize
+Gui, Margin,11,
 Gui,Font, normal s8, %_font%
 Gui,Add,Text,x9 y12 w85 %black% left, Files to Backup
 Gui,Add,Text,x9 y47 w85 %black% left, Backups Location
@@ -456,7 +495,7 @@ Gui,Font, s8 normal, %_font%
 GuiControl,, BLedit, %sDest%
 Gui,Add,Button,x437 y9 w30 h23 r1 center vSPvar gSPbtn,...
 Gui,Add,Button,x437 y44 w30 h23 r1 center vBPvar gBPbtn,...
-Gui,Add, GroupBox, x5 y80 w310 h101,
+Gui,Add, GroupBox, x5 y80 w310 h101 vBSGbx,
 Gui,Add,Text,x10 y97 w80 h13 left  %black%  ,Backup every
 Gui,Add,Edit,x85 y95 w70 h18 %black% number vBIedit gBIedit
 mInterval := (tInterval/60000)
@@ -464,9 +503,9 @@ Gui,Add,UpDown, 0x20  Range1-720 ,%mInterval%,vBIud
 Gui,Add,Text,x10 y116 w80 h13 %black% left ,Backup count
 
 Gui,Add,Edit,x85 y114 w70 h18 %black% Number vBCedit gBCedit
-Gui,Add,UpDown, 0x20  Range1-100000,%iBackupCount%,vBCud
+Gui,Add,UpDown, 0x20  Range1-1000,%iBackupCount%,vBCud
 
-Gui,Add, GroupBox, x10 y134 w150 h41, Backup these file types
+Gui,Add, GroupBox, x10 y134 w150 h41 vBFGbx, Backup these file types
 Gui,Add,Edit,x15 y150 w140 h20 %black% Lowercase vextsediVar gextsEdit,%sExts%
 
 Gui,Add,Checkbox,x166 y97 w140 h20 %black% -Wrap  vZipBackupvar gZipBackupcbx,Zip backups
@@ -496,10 +535,9 @@ Gui,Add,Button, x165 y139 w147 h35 center +Disabled  vBKvar gBKbtn , Manual Back
 Gui,Add,Button,x320 y92 w147 h35 +Disabled vDEvar gDEbtn,Deactivate
 Gui,Add,Button,x320 y139 w147 h35 center vACvar gACbtn,Activate
 Gui,Font, s8 normal, %_font%
-Gui,Add, Checkbox, x9 y184 vShowLogcbx gToggleLogcbx, Show Log
-Gui,Add,Text,x166 y184 w80 h13 left  %black%  ,Max Log Size
-Gui,Add,Edit,x242 y184 w70 h18 number %black% vLSedit gLSedit
-Gui,Add,UpDown, 0x20  Range10-10000,%iMaxLogSize%,vLSud
+Gui,Add,Text,x9 y184 w80 h13 left  %black%  vLSTex,Max Log Size
+Gui,Add,Edit,x85 y184 w70 h18 number %black% vLSedit gLSedit
+Gui,Add,UpDown, 0x20 Range10-10000 vLSud,%iMaxLogSize%
 
 if sPath !=
     GuiControl, Enabled, BKvar
@@ -507,26 +545,14 @@ if sPath !=
 Gui,Font, s8 normal, %_font%
 Gui, Add, StatusBar,gmainStatusBar vmainStatusBarVar,Ready
 Gui,Font, s7 , Lucida Console
-Gui,add, edit, x9 y212 w458 r9 left ReadOnly vLogEditVar gLogEdit
+Gui,add, edit, x9 y212 w458 h89 r9 left ReadOnly vLogEditVar gLogEdit
 Gui,Font, s8 normal, %_font%
+Gui,Show, autoSize center ,%myTitle%
 
-if (bLogVarEnabled=False)
-{
-    GuiControl,, ShowLogcbx, 0
-    GuiControl, Hide, LogEditVar
-    Gui,Show, h%winHeight_LogHide%,%myTitle%
-}
-else
-{
-    GuiControl,, ShowLogcbx, 1
-    GuiControl, Show, LogEditVar
-    Gui,Show, h%winHeight_LogShow%,%myTitle%
-  
-}
 
 ;Tooltips
-SLedit_TT := "The source folder."
-BLedit_TT := "The destination folder for storing backups."
+SLedit_TT := "The source folder. Double-click to open."
+BLedit_TT := "The destination folder for storing backups. Double-click to open."
 SPvar_TT := "Change the source folder."
 BPvar_TT := "Change the destination folder."
 BCedit_TT := "How many backups should be created before overwriting previous backups."
@@ -539,13 +565,33 @@ RecursiveVar_TT := "Toggles backup for files in subfolders."
 BIedit_TT := "The time between auto-updates in minutes."
 EDbtnvar_TT := "Edit what file types to backup."
 mainStatusBarVar_TT := ""
-LogEditVar_TT := ""
+LogEditVar_TT := "Double-click to open the log file."
 LSedit_TT := "Max allowed size of the log file in KB."
 
 OnMessage(0x200, "WM_MOUSEMOVE")
 OnMessage(0x0203, "WM_LBUTTONDBLCLK")
-
 Return
+
+Resize:
+	AutoSize("reset") ; Needs to reset if you changed the Control size manually.
+    return
+
+GuiSize:
+    If (A_EventInfo = 1) ; The window has been minimized.
+		Return
+    AutoSize("x", "SPvar")
+    AutoSize("w", "SLedit")
+    AutoSize("x", "BPvar")
+    AutoSize("w", "BLedit")
+    AutoSize("w", "BSGbx")
+    AutoSize("w", "BSGbx")
+    AutoSize("w", "BFGbx")
+    AutoSize("x", "BKvar")
+    AutoSize("x", "DEvar")
+    AutoSize("x", "ACvar")
+    AutoSize("w h0.99", "LogEditVar")
+    AutoSize("w","extsediVar")
+    Return
 
 WM_MOUSEMOVE()
 {
@@ -591,28 +637,23 @@ WM_LBUTTONDBLCLK(wParam, lParam)
         GuiControlGet, strPath,, BLedit
         if InStr(FileExist(strPath),"D")
         {   logPath := strPath . "\stbackup_log.txt"
-            if (FileExist(logPath))
+            if (!FileExist(logPath))
             {
-                SplitPath, logPath,,,,fName 
-                Run,% "notepad.exe " . logPath
-                If WinExist(fName)
-                    WinActivate 
+                FileAppend,, %logPath%
+            }
+            SplitPath, logPath,,,,fName 
+            Run,% "notepad.exe " . logPath
+            If WinExist(fName)
+            {
+                WinActivate
             }
         }
 
     }
-    if(a_guicontrol = "mainStatusBarVar") {
-        global mainStatusBarVar_TT
-        if (mainStatusBarVar_TT<>"")
-        {
-            if InStr(FileExist(mainStatusBarVar_TT),"D")
-            {
-                Run, Explorer /n`,/e`,%mainStatusBarVar_TT%
-            }
-        }
-    }    
     return
 }
+
+
 
 RevertSLeditColor:
 {
@@ -628,24 +669,6 @@ RevertBLeditColor:
 
 mainStatusBar:
 {
-    return
-}
-
-ToggleLogcbx:
-{
-    GuiControlGet, bLogVarEnabled, , ShowLogcbx
-    If (bLogVarEnabled=False)
-    {
-      GuiControl, Hide, LogEditVar
-      Gui,Show, h%winHeight_LogHide%,%myTitle%
-    }
-    Else
-    {
-      GuiControl, Show, LogEditVar
-      Gui,Show, h%winHeight_LogShow%,%myTitle%
-      
-    }
-    IniWrite, %bLogVarEnabled%, STB_settings.ini, Option, Show log
     return
 }
 
@@ -703,7 +726,7 @@ BIedit:
 BCedit:
 {
     GuiControlGet ,InVar,, BCedit
-    checkNum(InVar, "BCedit", 1,100000)
+    checkNum(InVar, "BCedit", 1,1000)
     iBackupCount := InVar
     IniWrite, %iBackupCount%, STB_settings.ini, Option, Backups Count
     Return
@@ -773,7 +796,7 @@ ACbtn:
         msgbox,% errIcon,, Your Backup Interval is not within the valid range: 1-720
         return
     }
-    Else if iBackupCount not between 1 and 100
+    Else if iBackupCount not between 1 and 1000
     {
         SplashTextOff
         msgbox,% errIcon,, Your Backup Count is not within the valid range: 1-100
@@ -960,6 +983,7 @@ ToggleBackup:
         SetTimer, Backup, %tInterval%
     }else  {
         logEditAdd("Auto backup stopped.")
+        ;SB_SetText(A_Tab  . "Auto backup stopped.",1,1)
         FormatTime, sNow, %a_now% T12, [yyyy-MM-dd%a_space%HH:mm:ss]
         sMainLogPath := sDest . sMainLogName
         if FileExist(sMainLogPath)
@@ -1139,7 +1163,6 @@ ExitSub:
         IniWrite, %sCustomDest%, STB_settings.ini, History, Last Manual Backup Location
         IniWrite, %bZipBackup%, STB_settings.ini, Option, Zip Backups
         IniWrite, %bRecursive%, STB_settings.ini, Option, Recursive
-        IniWrite, %bLogVarEnabled%, STB_settings.ini, Option, Show log
         IniWrite, %iMaxLogSize%, STB_settings.ini, Option, Max Log Size
         FormatTime, sNow, %a_now% T12, [yyyy-MM-dd%a_space%HH:mm:ss]
         FileAppend ,`n%sNow% exiting program..., %sLogfullpath%

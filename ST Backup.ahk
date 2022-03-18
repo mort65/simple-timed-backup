@@ -23,17 +23,23 @@ toggle := 0
 sCurrentTime :=""
 bCopyallExts:=false
 bRecursive:=false
-bZipBackup := 0
 errIcon := 16
 infoIcon := 64
-curVersion:=1.1
+curVersion:=1.111
 myName:="Simple Timed Backup"
-myTitle:=myName . " " . curVersion
 _WinH := 328
-_WinW := 478
+_WinW := 635
 iMaxLogSize := 500 ;kb
 
 _font:="Tahoma"
+
+getVersion(ver)
+{
+    index := InStr(ver,".")
+    return substr(ver,1,index+1) "." substr(ver,index+2,1)
+}
+
+myTitle:= myName " " getVersion(curVersion)
 
 IsEmpty(Dir){
    Loop %Dir%\*.*, 0, 1
@@ -141,6 +147,12 @@ psUnzip(inPath,outPath)
     Return ErrorLevel
 }
 
+psEscape(sPath)
+{
+    return RegExReplace(sPath, "[\[\]]", "``$0")
+}
+
+
 zipBackup(sPath)
 {
     if InStr(FileExist(sPath), "D") {
@@ -152,34 +164,36 @@ zipBackup(sPath)
         return
     }
     SplitPath, sPath, sName, sParent
-    FileDelete, %sParent%\%sName%.zip
-    FileDelete, %sPath%\%sName%.zip
-    sOut := sParent "\" sName ".zip"
-    Run PowerShell.exe -Command (Compress-Archive -LiteralPath '%sPath%' -CompressionLevel Optimal -DestinationPath '%sOut%'); if ($?) { (Remove-Item -force '%sPath%' -recurse -Confirm:$False); (New-Item -force -Path '%sPath%'  -ItemType Directory); (move-Item '%sOut%' '%sPath%' -force); },, Hide UseErrorLevel
+    FileDelete, %sParent%\%sName%.stb.zip
+    FileDelete, %sPath%\%sName%.stb.zip
+    sOut := sParent "\" sName ".stb.zip"
+    psOut := psEscape(sOut)
+    psPath := psEscape(sPath)
+    Run PowerShell.exe -Command (Compress-Archive -Path '%psPath%\*' -CompressionLevel Optimal -DestinationPath '%sOut%'); if ($?) {(Remove-Item -force '%psPath%' -recurse -Confirm:$False);},, Hide UseErrorLevel
     if (ErrorLevel = "ERROR")
     {
-        Zip(sPath , sParent "\" sName ".zip")      
+        Zip(sPath , sParent "\" sName ".stb.zip")      
         FileRemoveDir, %sPath%, 1
-        FileCreateDir, %sPath%
-        FileMove, %sParent%\%sName%.zip,%sPath%,1
     }
     Return
 }
 
 trimExts(ByRef sExtensions)
 {
-    StringReplace, sExtensions, sExtensions,`n,,All
-    StringReplace, sExtensions, sExtensions,%A_SPACE%,, All
-    StringReplace, sExtensions, sExtensions,%A_Tab%,, All
-    StringReplace, sExtensions, sExtensions,.,, All
-    StringReplace, sExtensions, sExtensions,/,, All
-    StringReplace, sExtensions, sExtensions,\,, All
-    StringReplace, sExtensions, sExtensions,:,, All
-    StringReplace, sExtensions, sExtensions,|,, All
-    StringReplace, sExtensions, sExtensions,",, All ;"a comment to fix notpad++ Syntax Highlighting
-    StringReplace, sExtensions, sExtensions,<,, All
-    StringReplace, sExtensions, sExtensions,>,, All
-    StringReplace, sExtensions, sExtensions,`,,, All
+    sExtensions:=StrReplace(sExtensions, "`r`n")
+    sExtensions:=StrReplace(sExtensions, "`n")
+    sExtensions:=StrReplace(sExtensions, A_SPACE)
+    sExtensions:=StrReplace(sExtensions, A_Tab)
+    sExtensions:=StrReplace(sExtensions, ".")
+    sExtensions:=StrReplace(sExtensions, "/")
+    sExtensions:=StrReplace(sExtensions, "\")
+    sExtensions:=StrReplace(sExtensions, ":")
+    sExtensions:=StrReplace(sExtensions, "|")
+    sExtensions:=StrReplace(sExtensions, """")
+    sExtensions:=StrReplace(sExtensions, "<")
+    sExtensions:=StrReplace(sExtensions, ">")
+    sExtensions:=StrReplace(sExtensions, ",")
+    sExtensions:=StrReplace(sExtensions, "?")    
     if(sExtensions ="")
     {
         sExtensions := "*;"
@@ -195,11 +209,10 @@ logErrors(sExt,sBackupPath,errCount,bSilent:=true)
     Global iMaxLogSize
     Global sMainLogPath
     FormatTime, sNow, %a_now% T12, [yyyy-MM-dd%a_space%HH:mm:ss]
-    FormatTime, curTime, %a_now% T12, [HH:mm]
     if (errCount < 0)
     {
         strLog := "Warning: No file copied. Type=*." . sExt
-        logEditAdd(shrinkString(strLog,73,"r"))
+        logEditAdd(strLog)
     }
     else if (errCount = 0)
     {
@@ -223,8 +236,7 @@ logErrors(sExt,sBackupPath,errCount,bSilent:=true)
             FileAppend ,%sNow% backup started..., %sMainLogPath%
             FileAppend ,`n%sNow% backup: `, extension:%sExt% `, source:%sPath%\ `, destination:%sBackupPath%\, %sMainLogPath%
         }           
-        strLog := shrinkString("*." . sExt . " Backup: """ . trimPath(sBackupPath) . """",73,"r")
-        ;SB_SetText(A_Tab  . curTime . " " . strLog,1,1)
+        strLog := "*." . sExt . " Backup: """ . trimPath(sBackupPath) . """"
         logEditAdd(strLog)
         if (FileExist(sBackupLogPath)) 
         {
@@ -247,11 +259,10 @@ logErrors(sExt,sBackupPath,errCount,bSilent:=true)
             FileAppend ,%sNow% warning! `, extension:%sExt% `, source:%sPath%\ `, destination:%sBackupPath%\, %sMainLogPath%
             FileAppend ,`n%sNow% can`t copy %errCount% file(s)!
         }
-        strLog := shrinkString("Error: Cannot copy " . errCount . " file(s) to destination. Type=*." . sExt, 73, r)
+        strLog := "Error: Cannot copy " . errCount . " file(s) to destination. Type=*." . sExt
         logEditAdd(strLog)
         if (!bSilent) 
-        {
-            SplashTextOff
+        {            
             msgBox,% errIcon,, Cannot copy some files!
             Gosub, ExitSub
         }
@@ -315,9 +326,9 @@ bIsParentPath(sParentPath,sChildPath)
 {
     If (StrReplace(sChildPath,sParentPath)=sChildPath)
     {
-        return false
+        return 0
     }
-    return true
+    return 1
 }
 
 checkNum(ByRef Variable, ControlID, MinVal, MaxVal)
@@ -372,14 +383,16 @@ StrReplaceVar(strIn)
     return strIn
 }
 
-CopyFiles(sExt,sDestFolder,bRecursive:=false)   
+CopyFiles(sExt,sDestFolder,sSourceFolder:="",bRecursive:=false)   
 {
     global sPath
     global sDest
     sPath:= trimPath(sPath)
     sDest:= trimPath(sDest)
     sDestFolder:= trimPath(sDestFolder)
-    if IsEmpty(sPath)
+    if !sSourceFolder
+        sSourceFolder:=sPath
+    if IsEmpty(sSourceFolder)
     {
         return -1
     }
@@ -391,22 +404,22 @@ CopyFiles(sExt,sDestFolder,bRecursive:=false)
     }
     ErrorCount := 0
     if (bRecursive=false) {
-        FileCopy, %sPath%\*.%sExt%, %sDestFolder%\, 1
+        FileCopy, %sSourceFolder%\*.%sExt%, %sDestFolder%\, 1
         ErrorCount := ErrorLevel
         If (ErrorCount > 0)
         {
             Return ErrorCount
         }
     } else {
-        Loop Files, %sPath%\*.%sExt%, R  ; Recurse into subfolders.
+        Loop Files, %sSourceFolder%\*.%sExt%, R  ; Recurse into subfolders.
         {
-            if (A_LoopFileDir=sPath)
+            if (A_LoopFileDir=sSourceFolder)
             {
                 FileCopy, %A_LoopFileFullPath%, %sDestFolder%\, 1
             }
             else
             {
-                sDestFileLongPath := StrReplace(A_LoopFileLongPath,sPath,sDestFolder)
+                sDestFileLongPath := StrReplace(A_LoopFileLongPath,sSourceFolder,sDestFolder)
                 SplitPath, sDestFileLongPath,, sDestFileDir
                 If (bIsParentPath(sDest,A_LoopFileLongPath))
                 {
@@ -443,7 +456,6 @@ if (FileExist("STB_settings.ini"))
     IniRead, iMaxLogSize, STB_settings.ini, Option, Max Log Size , 500
     IniRead, iBkupNum, STB_settings.ini, History, Next Backup Number, 1
     IniRead, sExts, STB_settings.ini, Option , Extensions, "*;"
-    IniRead, bZipBackup, STB_settings.ini, Option, Zip Backups , 0
     IniRead, bRecursive, STB_settings.ini, Option, Recursive , 0
     sPath := StrReplaceVar(trimPath(_sPath))
     sDest := StrReplaceVar(trimPath(_sDest))
@@ -472,7 +484,6 @@ if (FileExist("STB_settings.ini"))
     IniWrite, %iMaxLogSize%, STB_settings.ini, Option, Max Log Size
     IniWrite, %iBkupNum%, STB_settings.ini, History, Next Backup Number
     IniWrite, %sExts%, STB_settings.ini, Option, Extensions
-    IniWrite, %bZipBackup%, STB_settings.ini, Option, Zip Backups
     IniWrite, %bRecursive%, STB_settings.ini, Option, Recursive
 }
 
@@ -488,14 +499,14 @@ Gui, Margin,11,
 Gui,Font, normal s8, %_font%
 Gui,Add,Text,x9 y12 w85 %black% left, Files to Backup
 Gui,Add,Text,x9 y47 w85 %black% left, Backups Location
-Gui,Add,Edit,x95 y10 w332 h30 HwndHSLedit r1 %black% vSLedit gRevertSLeditColor,
+Gui,Add,Edit,x95 y10 w487 h30 HwndHSLedit r1 %black% vSLedit gRevertSLeditColor,
 GuiControl,, SLedit, %sPath%
-Gui,Add,Edit,x95 y45 w332 h30 HwndHBLedit r1 %black% vBLedit gRevertBLeditColor,
+Gui,Add,Edit,x95 y45 w487 h30 HwndHBLedit r1 %black% vBLedit gRevertBLeditColor,
 Gui,Font, s8 normal, %_font%
 GuiControl,, BLedit, %sDest%
-Gui,Add,Button,x437 y9 w30 h23 r1 center vSPvar gSPbtn,...
-Gui,Add,Button,x437 y44 w30 h23 r1 center vBPvar gBPbtn,...
-Gui,Add, GroupBox, x5 y80 w310 h101 vBSGbx,
+Gui,Add,Button,x592 y9 w30 h23 r1 center vSPvar gSPbtn,...
+Gui,Add,Button,x592 y44 w30 h23 r1 center vBPvar gBPbtn,...
+Gui,Add, GroupBox, x5 y80 w465 h101 vBSGbx,
 Gui,Add,Text,x10 y97 w80 h13 left  %black%  ,Backup every
 Gui,Add,Edit,x85 y95 w70 h18 %black% number vBIedit gBIedit
 mInterval := (tInterval/60000)
@@ -503,25 +514,12 @@ Gui,Add,UpDown, 0x20  Range1-720 ,%mInterval%,vBIud
 Gui,Add,Text,x10 y116 w80 h13 %black% left ,Backup count
 
 Gui,Add,Edit,x85 y114 w70 h18 %black% Number vBCedit gBCedit
-Gui,Add,UpDown, 0x20  Range1-1000,%iBackupCount%,vBCud
-
-Gui,Add, GroupBox, x10 y134 w150 h41 vBFGbx, Backup these file types
-Gui,Add,Edit,x15 y150 w140 h20 %black% Lowercase vextsediVar gextsEdit,%sExts%
-
-Gui,Add,Checkbox,x166 y97 w140 h20 %black% -Wrap  vZipBackupvar gZipBackupcbx,Zip backups
-
-if (bZipBackup = 1)
-{
-    GuiControl,, ZipBackupvar, 1    
-}
-else
-{
-    GuiControl,, ZipBackupvar, 0
-}
-
+Gui,Add,UpDown, 0x20  Range1-10000,%iBackupCount%,vBCud
+Gui,Add, GroupBox, x10 y134 w306 h41 vBFGbx, Backup these file types
+Gui,Add,Edit,x15 y150 w296 h20 %black% Lowercase vextsediVar gextsEdit,%sExts%
 Gui,Add,Checkbox,x166 y119 w140 h20 %black% -Wrap  vRecursiveVar gRecursivecbx,Recursive
 
-if (bRecursive = 1)
+if (bRecursive)
 {
     GuiControl,, RecursiveVar, 1    
 }
@@ -530,23 +528,32 @@ else
     GuiControl,, RecursiveVar, 0
 }
 
-Gui,Add,Button, x165 y139 w147 h35 center +Disabled  vBKvar gBKbtn , Manual Backup...
+Gui,Add,Button, x320 y92 w147 h35 center +Disabled  vRSvar gRSbtn , Restore...
 
-Gui,Add,Button,x320 y92 w147 h35 +Disabled vDEvar gDEbtn,Deactivate
-Gui,Add,Button,x320 y139 w147 h35 center vACvar gACbtn,Activate
+Gui,Add,Button, x320 y139 w147 h35 center +Disabled  vBKvar gBKbtn , Backup...
+
+Gui,Add,Button,x475 y92 w147 h35 +Disabled vDEvar gDEbtn,Deactivate
+Gui,Add,Button,x475 y139 w147 h35 center vACvar gACbtn,Activate
 Gui,Font, s8 normal, %_font%
-Gui,Add,Text,x9 y184 w80 h13 left  %black%  vLSTex,Max Log Size
-Gui,Add,Edit,x85 y184 w70 h18 number %black% vLSedit gLSedit
-Gui,Add,UpDown, 0x20 Range10-10000 vLSud,%iMaxLogSize%
+Gui,Add,Text,x166 y97 w80 h13 left  %black%,Max Log Size
+Gui,Add,Edit,x242 y97 w70 h18 number %black% vLSedit gLSedit
+Gui,Add,UpDown, 0x20 Range10-100000 vLSud,%iMaxLogSize%
 
 if sPath !=
-    GuiControl, Enabled, BKvar
+    {
+        GuiControl, Enabled, RSvar
+        if sDest !=
+        {
+            GuiControl, Enabled, BKvar  
+        }
+    }
 
 Gui,Font, s8 normal, %_font%
 Gui, Add, StatusBar,gmainStatusBar vmainStatusBarVar,Ready
 Gui,Font, s7 , Lucida Console
-Gui,add, edit, x9 y212 w458 h89 r9 left ReadOnly vLogEditVar gLogEdit
+Gui,add, edit, x9 y203 w614 h98 r9 left ReadOnly vLogEditVar gLogEdit
 Gui,Font, s8 normal, %_font%
+;Gui,Show, w%_WinW% h%_WinH% center ,%myTitle%
 Gui,Show, autoSize center ,%myTitle%
 
 
@@ -560,13 +567,14 @@ ACvar_TT := "First, a backup will be created inside the ""backup_0"" folder.`nTh
 DEvar_TT := "First, a backup will be created inside the ""backup_00"" folder.`nThen creating automated backups will be stopped."
 extsediVar_TT := "Extensions are separated by `;`n* means any extension"
 BKvar_TT := "Takes a manual backup inside the selected folder."
+RSvar_TT := "Restore a backup archive to the source folder."
 ZipBackupvar_TT := "Toggles the compression of backups."
 RecursiveVar_TT := "Toggles backup for files in subfolders."
 BIedit_TT := "The time between auto-updates in minutes."
 EDbtnvar_TT := "Edit what file types to backup."
 mainStatusBarVar_TT := ""
-LogEditVar_TT := "Double-click to open the log file."
-LSedit_TT := "Max allowed size of the log file in KB."
+LogEditVar_TT := "Double-click to open the log file if exists."
+LSedit_TT := "Max allowed size of the log file in Kbytes."
 
 OnMessage(0x200, "WM_MOUSEMOVE")
 OnMessage(0x0203, "WM_LBUTTONDBLCLK")
@@ -587,6 +595,7 @@ GuiSize:
     AutoSize("w", "BSGbx")
     AutoSize("w", "BFGbx")
     AutoSize("x", "BKvar")
+    AutoSize("x", "RSvar")
     AutoSize("x", "DEvar")
     AutoSize("x", "ACvar")
     AutoSize("w h0.99", "LogEditVar")
@@ -654,6 +663,13 @@ WM_LBUTTONDBLCLK(wParam, lParam)
 }
 
 
+resetGUI:
+{
+    Gui -Disabled
+    Gui,Show, autoSize ,%myTitle%
+    SB_SetText("ready",1,1)
+    return
+}
 
 RevertSLeditColor:
 {
@@ -688,11 +704,16 @@ logEditAdd(strIn)
 
 SPbtn:
 {
+    Gui +Disabled
     FileSelectFolder,OutputVar1 ,*%sPath% , 0, Files location
+    Gui -Disabled
+    Gui,Show, autoSize center ,%myTitle%    
+    
     if OutputVar1 =
-    return
+        return
     GuiControl,, SLedit, %OutputVar1%
     GuiControl, Enabled, BKvar
+    GuiControl, Enabled, RSvar
     sPath := OutputVar1
     IniWrite, %sPath%, STB_settings.ini, Paths, Files Location
     Return
@@ -700,9 +721,13 @@ SPbtn:
 
 BPbtn:
 {
+    Gui +Disabled
     FileSelectFolder,OutputVar2 ,*%sDest% , 3, Backups location
+    Gui -Disabled
+    Gui,Show, autoSize center ,%myTitle%
+    
     if OutputVar2 =
-    return
+        return
     if (OutputVar2 = sDest)
         return
     FileCreateDir, %OutputVar2%\ST_Backups
@@ -710,6 +735,7 @@ BPbtn:
     GuiControl,, BLedit, %OutputVar2%
     sDest := OutputVar2
     sMainLogPath := sDest . sMainLogName
+    GuiControl, Enabled, BKvar 
     IniWrite, %sDest%, STB_settings.ini, Paths, Backups Location
     Return
 }
@@ -726,7 +752,7 @@ BIedit:
 BCedit:
 {
     GuiControlGet ,InVar,, BCedit
-    checkNum(InVar, "BCedit", 1,1000)
+    checkNum(InVar, "BCedit", 1,10000)
     iBackupCount := InVar
     IniWrite, %iBackupCount%, STB_settings.ini, Option, Backups Count
     Return
@@ -746,13 +772,6 @@ extsEdit:
     Return
 }
     
-ZipBackupcbx:
-{
-    bZipBackup := !bZipBackup
-    IniWrite, %bZipBackup%, STB_settings.ini, Option, Zip Backups
-    Return
-}
-
 Recursivecbx:
 {
     bRecursive := !bRecursive
@@ -791,15 +810,18 @@ ACbtn:
         Return
     }
     Else if tInterval not between 1 and 720
-    {
-        SplashTextOff
-        msgbox,% errIcon,, Your Backup Interval is not within the valid range: 1-720
+    {        
+        msgbox,% errIcon,, Backup Interval is not within the valid range: 1-720
         return
     }
-    Else if iBackupCount not between 1 and 1000
+    Else if iBackupCount not between 1 and 10000
+    {        
+        msgbox,% errIcon,, Backup Count is not within the valid range: 1-10000
+        return
+    }
+    Else if iMaxLogSize not between 1 and 100000
     {
-        SplashTextOff
-        msgbox,% errIcon,, Your Backup Count is not within the valid range: 1-100
+        msgbox,% errIcon,, Max Log Size is not within the valid range: 1-100000
         return
     }
     else  
@@ -831,8 +853,7 @@ ACbtn:
             FileCreateDir, %sDest%
             erl:=ErrorLevel
             if(erl<>0)
-            {
-                SplashTextOff
+            {                
                 msgbox,% errIcon,, The path you entered could not be created: %sDest%
                 return
             }
@@ -842,6 +863,7 @@ ACbtn:
         tInterval:=tInterval*60000
         GuiControl,Disable,ACvar
         GuiControl,Enable,DEvar
+        GuiControl,Disable,RSvar
         GuiControl,Disable,SPvar
         GuiControl,Disable,BPvar
         GuiControl,Disable,BCedit
@@ -852,7 +874,7 @@ ACbtn:
         GuiControl, Disabled, ZipBackupvar
         GuiControl, Disabled, RecursiveVar
         GuiControl, +ReadOnly, extsediVar
-        SB_SetText(A_Tab  . "Auto backup started.",1,1)
+        SB_SetText("Auto backup started.",1,1)
         logEditAdd("Auto backup started.")
         sMainLogPath := sDest . sMainLogName
         FormatTime, sNow, %a_now% T12, [yyyy-MM-dd%a_space%HH:mm:ss]
@@ -884,15 +906,24 @@ ACbtn:
                 bCopyallExts:=true
                 Break
             }
+        } 
+        If (bCopyallExts)
+         {
+            ErrorCount := CopyFiles("*",sBackupPath,,bRecursive)
+            logErrors("*", sBackupPath, ErrorCount)
+            If (ErrorCount > 0)
+            {
+                Return
+            }
         }
-        if(bCopyallExts = false)
+        else
         {
             loop, %ExtArr0%
             {
                 if(ExtArr%A_Index% <> "")
                 {
                     tempExt:=ExtArr%A_Index%
-                    ErrorCount := CopyFiles(tempExt,sBackupPath,bRecursive)
+                    ErrorCount := CopyFiles(tempExt,sBackupPath,,bRecursive)
                     logErrors(tempExt, sBackupPath, ErrorCount)
                     If (ErrorCount > 0)
                     {
@@ -900,18 +931,8 @@ ACbtn:
                     }
                 }
             }
-        } else If ( bCopyallExts = True)
-         {
-            ErrorCount := CopyFiles("*",sBackupPath,bRecursive)
-            logErrors("*", sBackupPath, ErrorCount)
-            If (ErrorCount > 0)
-            {
-                Return
-            }
-        }       
-        If (bZipBackup = 1) {
-            zipBackup(sDest "\Backup_0")
-        }         
+        }
+        zipBackup(sDest "\Backup_0")        
         Gosub, ToggleBackup
     }
     Return
@@ -921,6 +942,7 @@ DEbtn:
 {
     GuiControl,Disable,DEvar
     GuiControl,Enable,ACvar
+    GuiControl,Enable,RSvar
     GuiControl,Enable,SPvar
     GuiControl,Enable,BPvar
     GuiControl,Enable,BCedit
@@ -934,14 +956,23 @@ DEbtn:
     sBackupLogPath := sBackupPath . "\stbackup_log.txt"
     FileDelete, %sBackupLogPath%
     FileRemoveDir, %sBackupPath%, 1
-    if(bCopyallExts = false)
+    If (bCopyallExts)
+     {
+        ErrorCount := CopyFiles("*",sBackupPath,,bRecursive)
+        logErrors("*", sBackupPath, ErrorCount)
+        If (ErrorCount > 0)
+        {
+            Return
+        }
+    }
+    else
     {
         loop, %ExtArr0%
         {
             if(ExtArr%A_Index% <> "")
             {
                 tempExt:=ExtArr%A_Index%
-                ErrorCount := CopyFiles(tempExt,sBackupPath,bRecursive)
+                ErrorCount := CopyFiles(tempExt,sBackupPath,,bRecursive)
                 logErrors(tempExt, sBackupPath, ErrorCount)
                 If (ErrorCount > 0)
                 {
@@ -949,18 +980,8 @@ DEbtn:
                 }
             }
         }
-    } else If ( bCopyallExts = True)
-     {
-        ErrorCount := CopyFiles("*",sBackupPath,bRecursive)
-        logErrors("*", sBackupPath, ErrorCount)
-        If (ErrorCount > 0)
-        {
-            Return
-        }
-    }       
-    If (bZipBackup = 1) {
-        zipBackup(sDest "\Backup_00")
     }
+    zipBackup(sDest "\Backup_00")
     Gosub, ToggleBackup
     return
 }
@@ -983,7 +1004,7 @@ ToggleBackup:
         SetTimer, Backup, %tInterval%
     }else  {
         logEditAdd("Auto backup stopped.")
-        SB_SetText(A_Tab  . "Auto backup stopped.",1,1)
+        SB_SetText("Auto backup stopped.",1,1)
         FormatTime, sNow, %a_now% T12, [yyyy-MM-dd%a_space%HH:mm:ss]
         sMainLogPath := sDest . sMainLogName
         if FileExist(sMainLogPath)
@@ -1001,14 +1022,23 @@ backup:
     sBackupLogPath := sBackupPath . "\stbackup_log.txt"
     FileDelete, %sBackupLogPath%
     FileRemoveDir, %sBackupPath%, 1
-    if(bCopyallExts = false)
+    If (bCopyallExts)
+     {
+        ErrorCount := CopyFiles("*",sBackupPath,,bRecursive)
+        logErrors("*", sBackupPath, ErrorCount)
+        If (ErrorCount > 0)
+        {
+            Return
+        }
+    }
+    else 
     {
         loop, %ExtArr0%
         {
             if(ExtArr%A_Index% <> "")
             {
                 tempExt:=ExtArr%A_Index%
-                ErrorCount := CopyFiles(tempExt,sBackupPath,bRecursive)
+                ErrorCount := CopyFiles(tempExt,sBackupPath,,bRecursive)
                 logErrors(tempExt, sBackupPath, ErrorCount)
                 If (ErrorCount > 0)
                 {
@@ -1016,18 +1046,8 @@ backup:
                 }
             }
         }
-    } else If ( bCopyallExts = True)
-     {
-        ErrorCount := CopyFiles("*",sBackupPath,bRecursive)
-        logErrors("*", sBackupPath, ErrorCount)
-        If (ErrorCount > 0)
-        {
-            Return
-        }
-    }  
-    If (bZipBackup = 1) {
-        zipBackup(sDest "\Backup_" iBkupNum)
     }
+    zipBackup(sDest "\Backup_" iBkupNum)
     iBkupNum := iBkupNum + 1
     if (iBkupNum > iBackupCount )
     {
@@ -1035,6 +1055,80 @@ backup:
     }
     IniWrite, %iBkupNum%, STB_settings.ini, History, Next Backup Number
     Return
+}
+
+RSbtn:
+{
+    GuiControlGet, sPath,, SLedit
+    GuiControlGet, sDest,, BLedit
+    GuiControlGet, Extstring ,, extsediVar,
+    sPath := trimPath(sPath)
+    sDest := trimPath(sDest)
+    trimExts(Extstring)
+    sExts := Extstring
+    sPVar :=InStr(FileExist(sPath),"D")
+    If (sPVar=0)
+    {
+        CtlColors.Change(HSLedit, "FFC0C0", "")
+        GuiControl,Focus, SLedit
+        return
+    }
+    sCVar :=InStr(FileExist(sCustomDest),"D")
+    Gui +Disabled
+    SelectedFile:=""
+    If (sCVar!=0)
+        FileSelectFile, SelectedFile, 3,%sCustomDest% , Open a file, Backup archive (*.stb.zip)
+    Else
+        FileSelectFile, SelectedFile, 3, %sDest%, Open a file, Backup archive (*.stb.zip)
+    Gui -Disabled
+    Gui,Show, autoSize center ,%myTitle%
+    if (SelectedFile = "")
+        Return
+    shortFile := shrinkString(SelectedFile,55,"l")
+    Gui +Disabled
+    MsgBox 547,Restore, Are you sure you want to restore this backup?`n`r"%shortFile%"
+    IfMsgBox No
+    {
+        Gosub, resetGUI
+        Return
+    } 
+    IfMsgBox Cancel
+    {
+        Gosub, resetGUI
+        Return
+    }
+        
+    SB_SetText("Restoring...",1,1)
+    tempPath:= sPath . "\._sb_restore"
+    FileRemoveDir, %tempPath%, 1
+    FileCreateDir, %tempPath%
+    Unz(SelectedFile, tempPath)
+    if not FileExist(tempPath . sMainLogName)
+    {
+        FileRemoveDir, %tempPath%, 1
+        msgBox ,% errIcon,, Invalid Backup file!
+        Gosub, resetGUI
+        Return            
+    }
+    FileDelete, %tempPath%%sMainLogName%
+    CopyFiles("*",sPath,tempPath,true)
+    FileRemoveDir, %tempPath%, 1
+    msgBox ,% infoIcon,, Restore finished.
+    Gosub, resetGUI
+    strLog := "Restore: """ . trimPath(SelectedFile) . """"
+    logEditAdd(strLog)
+    sMainLogPath := sDest . sMainLogName
+    FormatTime, sNow, %a_now% T12, [yyyy-MM-dd%a_space%HH:mm:ss]
+    if (FileExist(sMainLogPath)) 
+    {
+        FileAppend ,`n%sNow% Restored: %SelectedFile%,%sMainLogPath%
+    }
+    else
+    {
+        FileAppend ,%sNow% Restored: %SelectedFile%,%sMainLogPath%
+    } 
+    Run, Explorer /n`,/e`,%sPath%
+    return
 }
 
 BKbtn:
@@ -1056,10 +1150,12 @@ BKbtn:
         return
     }
     sCVar :=InStr(FileExist(sCustomDest),"D")
+    Gui +Disabled
     If (sCVar!=0)
         FileSelectFolder,OutputVar3 ,*%sCustomDest% , 3, Manual backup location
     Else
         FileSelectFolder,OutputVar3 ,*%sDest% , 3, Manual backup location
+    Gosub, resetGUI
     if OutputVar3 =
         return
     if (OutputVar3 = sPath)
@@ -1072,8 +1168,7 @@ BKbtn:
         FileCreateDir, %OutputVar3%
         erl:=ErrorLevel
         if(erl<>0)
-        {
-            SplashTextOff
+        {            
             msgbox,% errIcon,, The backup path could not be created: %OutputVar3%
             return
         }
@@ -1090,43 +1185,48 @@ BKbtn:
         }
     }
     sMainLogPath := sDest . sMainLogName
-    FormatTime, sNow, %a_now% T12, [yyyy-MM-dd_HH-mm-ss]
+    FormatTime, sNow, %a_now% T12, (yyyy-MM-dd_HH-mm-ss)
     SplitPath, sPath, dname
     sBackupPath := OutputVar3 . "\STBackup_" . dname . "_" . sNow
     sBackupLogPath := sBackupPath . "\stbackup_log.txt"
+    Gui +Disabled
+    SB_SetText("Backing up...",1,1)
     FileDelete, %sBackupLogPath%
     FileRemoveDir, %sBackupPath%, 1
-    if(bCopyallExts = false)
+    If (bCopyallExts)
+     {
+        ErrorCount := CopyFiles("*",sBackupPath,,bRecursive)
+        logErrors("*", sBackupPath, ErrorCount, false)
+        If (ErrorCount > 0)
+        {   msgBox ,% errIcon,, Backup failed!
+            Gosub, resetGUI
+            Return
+        }
+    }
+    else
     {
         loop, %ExtArr0%
         {
             if(ExtArr%A_Index% <> "")
             {
                 tempExt:=ExtArr%A_Index%
-                ErrorCount := CopyFiles(tempExt,sBackupPath,bRecursive)
+                ErrorCount := CopyFiles(tempExt,sBackupPath,,bRecursive)
                 logErrors(tempExt, sBackupPath, ErrorCount, false)
                 If (ErrorCount > 0)
                 {
+                    msgBox ,% errIcon,, Backup failed!
+                    Gosub, resetGUI
                     Return
                 }
             }
         }
-    } else If ( bCopyallExts = True)
-     {
-        ErrorCount := CopyFiles("*",sBackupPath,bRecursive)
-        logErrors("*", sBackupPath, ErrorCount, false)
-        If (ErrorCount > 0)
-        {
-            Return
-        }
     }
-    If (bZipBackup = 1) {
-        zipBackup(sBackupPath)
-    }
+    zipBackup(sBackupPath)
     sCustomDest := OutputVar3
-    IniWrite, %sCustomDest%, STB_settings.ini, History, Last Manual Backup Location
-    SplashTextOff
+    IniWrite, %sCustomDest%, STB_settings.ini, History, Last Manual Backup Location    
     msgBox ,% infoIcon,, Backup finished.
+    Gosub, resetGUI
+    Run, Explorer /n`,/e`,%sCustomDest%
     return
 }
 
@@ -1160,8 +1260,7 @@ ExitSub:
         IniWrite, %iBackupCount%, STB_settings.ini, Option, Backups Count 
         IniWrite, %iBkupNum%, STB_settings.ini, History, Next Backup Number
         IniWrite, %sExts%, STB_settings.ini, Option , Extensions
-        IniWrite, %sCustomDest%, STB_settings.ini, History, Last Manual Backup Location
-        IniWrite, %bZipBackup%, STB_settings.ini, Option, Zip Backups
+        IniWrite, %sCustomDest%, STB_settings.ini, History, Last Manual Backup Locations
         IniWrite, %bRecursive%, STB_settings.ini, Option, Recursive
         IniWrite, %iMaxLogSize%, STB_settings.ini, Option, Max Log Size
         FormatTime, sNow, %a_now% T12, [yyyy-MM-dd%a_space%HH:mm:ss]

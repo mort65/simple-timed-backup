@@ -20,7 +20,6 @@ sExts := ""
 iBackupCount := 10
 tInterval := 300000 ; 5 min
 toggle := 0
-sCurrentTime :=""
 bCopyallExts:=false
 bRecursive:=false
 errIcon := 16
@@ -210,11 +209,12 @@ logErrors(sExt,sBackupPath,errCount,bSilent:=true)
     Global iMaxLogSize
     Global sMainLogPath
     Global _backup_ext
-    FormatTime, sNow, %a_now% T12, [yyyy-MM-dd%a_space%HH:mm:ss]
+    Global errIcon
+    FormatTime, sTime, %a_now% T12, [yyyy-MM-dd%a_space%HH:mm:ss]
     if (errCount < 0)
     {
-        strLog := "Warning: No file copied. Type=*." . sExt
-        logEditAdd(strLog)
+        sLog := "Warning: No file copied. Type=*." . sExt
+        logEditAdd(sLog)
     }
     else if (errCount = 0)
     {
@@ -225,21 +225,21 @@ logErrors(sExt,sBackupPath,errCount,bSilent:=true)
             if (logsizekb>iMaxLogSize)
             {
                 FileDelete, %sMainLogPath%
-                FileAppend ,%sNow% backup started..., %sMainLogPath%
-                FileAppend ,`n%sNow% backup: `, extension:%sExt% `, source:%sPath%\ `, destination:%sBackupPath%%_backup_ext%, %sMainLogPath%
+                FileAppend ,%sTime% backup started..., %sMainLogPath%
+                FileAppend ,`n%sTime% backup: `, extension:%sExt% `, source:%sPath%\ `, destination:%sBackupPath%%_backup_ext%, %sMainLogPath%
             } 
             else  
             {
-                FileAppend ,`n%sNow% backup: `, extension:%sExt% `, source:%sPath%\ `, destination:%sBackupPath%%_backup_ext%, %sMainLogPath%
+                FileAppend ,`n%sTime% backup: `, extension:%sExt% `, source:%sPath%\ `, destination:%sBackupPath%%_backup_ext%, %sMainLogPath%
             }
         } 
         else  
         {
-            FileAppend ,%sNow% backup started..., %sMainLogPath%
-            FileAppend ,`n%sNow% backup: `, extension:%sExt% `, source:%sPath%\ `, destination:%sBackupPath%%_backup_ext%, %sMainLogPath%
+            FileAppend ,%sTime% backup started..., %sMainLogPath%
+            FileAppend ,`n%sTime% backup: `, extension:%sExt% `, source:%sPath%\ `, destination:%sBackupPath%%_backup_ext%, %sMainLogPath%
         }           
-        strLog := "*." . sExt . " Backup: """ . trimPath(sBackupPath . _backup_ext) . """"
-        logEditAdd(strLog)
+        sLog := "*." . sExt . " Backup: """ . trimPath(sBackupPath . _backup_ext) . """"
+        logEditAdd(sLog)
         if (FileExist(sBackupLogPath)) 
         {
             FileAppend ,`n*.%sExt% Backup: %sCurrentTime%,%sBackupLogPath%
@@ -253,16 +253,16 @@ logErrors(sExt,sBackupPath,errCount,bSilent:=true)
     {
         if FileExist(sMainLogPath)
         {
-            FileAppend ,`n%sNow% warning! `, extension:%sExt% `, source:%sPath%\ `, destination:%sBackupPath%%_backup_ext%, %sMainLogPath%
-            FileAppend ,`n%sNow% can`t copy %errCount% file(s)!
+            FileAppend ,`n%sTime% warning! `, extension:%sExt% `, source:%sPath%\ `, destination:%sBackupPath%%_backup_ext%, %sMainLogPath%
+            FileAppend ,`n%sTime% can`t copy %errCount% file(s)!
         }
         else
         {
-            FileAppend ,%sNow% warning! `, extension:%sExt% `, source:%sPath%\ `, destination:%sBackupPath%%_backup_ext%, %sMainLogPath%
-            FileAppend ,`n%sNow% can`t copy %errCount% file(s)!
+            FileAppend ,%sTime% warning! `, extension:%sExt% `, source:%sPath%\ `, destination:%sBackupPath%%_backup_ext%, %sMainLogPath%
+            FileAppend ,`n%sTime% can`t copy %errCount% file(s)!
         }
-        strLog := "Error: Cannot copy " . errCount . " file(s) to destination. Type=*." . sExt
-        logEditAdd(strLog)
+        sLog := "Error: Cannot copy " . errCount . " file(s) to destination. Type=*." . sExt
+        logEditAdd(sLog)
         if (!bSilent) 
         {            
             msgBox,% errIcon,, Cannot copy some files!
@@ -399,18 +399,18 @@ CopyFiles(sExt,sDestFolder,sSourceFolder:="",bRecursive:=false)
         return -1
     }
     FileCreateDir, %sDestFolder%
-    ErrorCount:=ErrorLevel
-    if(ErrorCount<>0)
+    ErrCount:=ErrorLevel
+    if(ErrCount<>0)
     {
         return
     }
-    ErrorCount := 0
+    ErrCount := 0
     if (bRecursive=false) {
         FileCopy, %sSourceFolder%\*.%sExt%, %sDestFolder%\, 1
-        ErrorCount := ErrorLevel
-        If (ErrorCount > 0)
+        ErrCount := ErrorLevel
+        If (ErrCount > 0)
         {
-            Return ErrorCount
+            Return ErrCount
         }
     } else {
         Loop Files, %sSourceFolder%\*.%sExt%, R  ; Recurse into subfolders.
@@ -434,10 +434,10 @@ CopyFiles(sExt,sDestFolder,sSourceFolder:="",bRecursive:=false)
                 }
                 FileCopy, %A_LoopFileFullPath%, %sDestFileDir%\, 1                          
             }
-            ErrorCount := ErrorLevel
-            If (ErrorCount > 0)
+            ErrCount := ErrorLevel
+            If (ErrCount > 0)
             {
-                Return ErrorCount
+                Return ErrCount
             }
         }
     }
@@ -499,27 +499,27 @@ Gui, -MaximizeBox
 Gui, +Resize +MinSize
 Gui, Margin,11,
 Gui,Font, normal s8, %_font%
-Gui,Add,Text,x9 y12 w85 %black% left, Files to Backup
-Gui,Add,Text,x9 y47 w85 %black% left, Backups Location
-Gui,Add,Edit,x95 y10 w487 h30 HwndHSLedit r1 %black% vSLedit gRevertSLeditColor,
+Gui,Add,Text,x9 y12 w85 left, Files to Backup
+Gui,Add,Text,x9 y47 w85 left, Backups Location
+Gui,Add,Edit,x95 y10 w487 h30 HwndHSLedit r1  vSLedit gRevertSLeditColor,
 GuiControl,, SLedit, %sPath%
-Gui,Add,Edit,x95 y45 w487 h30 HwndHBLedit r1 %black% vBLedit gRevertBLeditColor,
+Gui,Add,Edit,x95 y45 w487 h30 HwndHBLedit r1  vBLedit gRevertBLeditColor,
 Gui,Font, s8 normal, %_font%
 GuiControl,, BLedit, %sDest%
 Gui,Add,Button,x592 y9 w30 h23 r1 center vSPvar gSPbtn,...
 Gui,Add,Button,x592 y44 w30 h23 r1 center vBPvar gBPbtn,...
 Gui,Add, GroupBox, x5 y80 w465 h101 vBSGbx,
-Gui,Add,Text,x10 y97 w80 h13 left  %black%  ,Backup every
-Gui,Add,Edit,x85 y95 w70 h18 %black% number vBIedit gBIedit
+Gui,Add,Text,x10 y97 w80 h13 left ,Backup every
+Gui,Add,Edit,x85 y95 w70 h18  number vBIedit gBIedit
 mInterval := (tInterval/60000)
 Gui,Add,UpDown, 0x20  Range1-720 ,%mInterval%,vBIud
-Gui,Add,Text,x10 y116 w80 h13 %black% left ,Backup count
+Gui,Add,Text,x10 y116 w80 h13  left ,Backup count
 
-Gui,Add,Edit,x85 y114 w70 h18 %black% Number vBCedit gBCedit
+Gui,Add,Edit,x85 y114 w70 h18 Number vBCedit gBCedit
 Gui,Add,UpDown, 0x20  Range1-10000,%iBackupCount%,vBCud
 Gui,Add, GroupBox, x10 y134 w306 h41 vBFGbx, Backup these file types
-Gui,Add,Edit,x15 y150 w296 h20 %black% Lowercase vextsediVar gextsEdit,%sExts%
-Gui,Add,Checkbox,x166 y119 w140 h20 %black% -Wrap  vRecursiveVar gRecursivecbx,Recursive
+Gui,Add,Edit,x15 y150 w296 h20  Lowercase vextsediVar gextsEdit,%sExts%
+Gui,Add,Checkbox,x166 y119 w140 h20 -Wrap  vRecursiveVar gRecursivecbx,Recursive
 
 if (bRecursive)
 {
@@ -537,8 +537,8 @@ Gui,Add,Button, x320 y139 w147 h35 center +Disabled  vRSvar gRSbtn , Restore...
 Gui,Add,Button,x475 y92 w147 h35 +Disabled vDEvar gDEbtn,Deactivate
 Gui,Add,Button,x475 y139 w147 h35 center vACvar gACbtn,Activate
 Gui,Font, s8 normal, %_font%
-Gui,Add,Text,x166 y97 w80 h13 left  %black%,Max Log Size
-Gui,Add,Edit,x242 y97 w70 h18 number %black% vLSedit gLSedit
+Gui,Add,Text,x166 y97 w80 h13 left ,Max Log Size
+Gui,Add,Edit,x242 y97 w70 h18 number vLSedit gLSedit
 Gui,Add,UpDown, 0x20 Range10-100000 vLSud,%iMaxLogSize%
 
 if sPath !=
@@ -551,7 +551,7 @@ if sPath !=
     }
 
 Gui,Font, s8 normal, %_font%
-Gui, Add, StatusBar,gmainStatusBar vmainStatusBarVar,Ready
+Gui, Add, StatusBar,gmainStatusBar vmainStatusBarVar,%A_Tab%Ready
 Gui,Font, s7 , Lucida Console
 Gui,add, edit, x9 y203 w614 h98 r9 left ReadOnly vLogEditVar gLogEdit
 Gui,Font, s8 normal, %_font%
@@ -606,8 +606,11 @@ GuiSize:
 
 WM_MOUSEMOVE()
 {
-    static CurrControl, PrevControl, _TT  ; _TT is kept blank for use by the ToolTip command below.
+    static PrevControl := ""
+    static _TT := "" ; _TT is kept blank for use by the ToolTip command below.
+    static CurrControl := ""
     CurrControl := A_GuiControl
+    
     If (CurrControl <> PrevControl and not InStr(CurrControl, " "))
     {
         ToolTip  ; Turn off any previous tooltip.
@@ -669,7 +672,7 @@ resetGUI:
 {
     Gui -Disabled
     Gui,Show, autoSize ,%myTitle%
-    SB_SetText("ready",1,1)
+    SB_SetText(A_Tab  . "ready",1,1)
     return
 }
 
@@ -876,7 +879,7 @@ ACbtn:
         GuiControl, Disabled, ZipBackupvar
         GuiControl, Disabled, RecursiveVar
         GuiControl, +ReadOnly, extsediVar
-        SB_SetText("Auto backup started.",1,1)
+        SB_SetText(A_Tab  . "Auto backup started.",1,1)
         logEditAdd("Auto backup started.")
         sMainLogPath := sDest . sMainLogName
         FormatTime, sNow, %a_now% T12, [yyyy-MM-dd%a_space%HH:mm:ss]
@@ -1006,7 +1009,7 @@ ToggleBackup:
         SetTimer, Backup, %tInterval%
     }else  {
         logEditAdd("Auto backup stopped.")
-        SB_SetText("Auto backup stopped.",1,1)
+        SB_SetText(A_Tab  . "Auto backup stopped.",1,1)
         FormatTime, sNow, %a_now% T12, [yyyy-MM-dd%a_space%HH:mm:ss]
         sMainLogPath := sDest . sMainLogName
         if FileExist(sMainLogPath)
@@ -1100,7 +1103,7 @@ RSbtn:
         Return
     }
         
-    SB_SetText("Restoring...",1,1)
+    SB_SetText(A_Tab  . "Restoring...",1,1)
     tempPath:= sPath . "\._sb_restore"
     FileRemoveDir, %tempPath%, 1
     FileCreateDir, %tempPath%
@@ -1192,7 +1195,7 @@ BKbtn:
     sBackupPath := OutputVar3 . "\STBackup_" . dname . "_" . sNow
     sBackupLogPath := sBackupPath . "\stbackup_log.txt"
     Gui +Disabled
-    SB_SetText("Backing up...",1,1)
+    SB_SetText(A_Tab  . "Backing up...",1,1)
     FileDelete, %sBackupLogPath%
     FileRemoveDir, %sBackupPath%, 1
     If (bCopyallExts)
@@ -1266,7 +1269,10 @@ ExitSub:
         IniWrite, %bRecursive%, STB_settings.ini, Option, Recursive
         IniWrite, %iMaxLogSize%, STB_settings.ini, Option, Max Log Size
         FormatTime, sNow, %a_now% T12, [yyyy-MM-dd%a_space%HH:mm:ss]
-        FileAppend ,`n%sNow% exiting program..., %sLogfullpath%
+        if FileExist(sMainLogPath)
+        {
+            FileAppend ,`n%sNow% exiting program..., %sMainLogPath%
+        }
         sleep, 50
     }
     ExitApp

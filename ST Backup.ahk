@@ -30,6 +30,7 @@ myName:="Simple Timed Backup"
 _WinH := 328
 _WinW := 635
 iMaxLogSize := 500 ;kb
+_backup_ext:=".stb.zip"
 
 _font:="Tahoma"
 
@@ -208,6 +209,7 @@ logErrors(sExt,sBackupPath,errCount,bSilent:=true)
     Global sMainLogName
     Global iMaxLogSize
     Global sMainLogPath
+    Global _backup_ext
     FormatTime, sNow, %a_now% T12, [yyyy-MM-dd%a_space%HH:mm:ss]
     if (errCount < 0)
     {
@@ -224,19 +226,19 @@ logErrors(sExt,sBackupPath,errCount,bSilent:=true)
             {
                 FileDelete, %sMainLogPath%
                 FileAppend ,%sNow% backup started..., %sMainLogPath%
-                FileAppend ,`n%sNow% backup: `, extension:%sExt% `, source:%sPath%\ `, destination:%sBackupPath%\, %sMainLogPath%
+                FileAppend ,`n%sNow% backup: `, extension:%sExt% `, source:%sPath%\ `, destination:%sBackupPath%%_backup_ext%, %sMainLogPath%
             } 
             else  
             {
-                FileAppend ,`n%sNow% backup: `, extension:%sExt% `, source:%sPath%\ `, destination:%sBackupPath%\, %sMainLogPath%
+                FileAppend ,`n%sNow% backup: `, extension:%sExt% `, source:%sPath%\ `, destination:%sBackupPath%%_backup_ext%, %sMainLogPath%
             }
         } 
         else  
         {
             FileAppend ,%sNow% backup started..., %sMainLogPath%
-            FileAppend ,`n%sNow% backup: `, extension:%sExt% `, source:%sPath%\ `, destination:%sBackupPath%\, %sMainLogPath%
+            FileAppend ,`n%sNow% backup: `, extension:%sExt% `, source:%sPath%\ `, destination:%sBackupPath%%_backup_ext%, %sMainLogPath%
         }           
-        strLog := "*." . sExt . " Backup: """ . trimPath(sBackupPath) . """"
+        strLog := "*." . sExt . " Backup: """ . trimPath(sBackupPath . _backup_ext) . """"
         logEditAdd(strLog)
         if (FileExist(sBackupLogPath)) 
         {
@@ -251,12 +253,12 @@ logErrors(sExt,sBackupPath,errCount,bSilent:=true)
     {
         if FileExist(sMainLogPath)
         {
-            FileAppend ,`n%sNow% warning! `, extension:%sExt% `, source:%sPath%\ `, destination:%sBackupPath%\, %sMainLogPath%
+            FileAppend ,`n%sNow% warning! `, extension:%sExt% `, source:%sPath%\ `, destination:%sBackupPath%%_backup_ext%, %sMainLogPath%
             FileAppend ,`n%sNow% can`t copy %errCount% file(s)!
         }
         else
         {
-            FileAppend ,%sNow% warning! `, extension:%sExt% `, source:%sPath%\ `, destination:%sBackupPath%\, %sMainLogPath%
+            FileAppend ,%sNow% warning! `, extension:%sExt% `, source:%sPath%\ `, destination:%sBackupPath%%_backup_ext%, %sMainLogPath%
             FileAppend ,`n%sNow% can`t copy %errCount% file(s)!
         }
         strLog := "Error: Cannot copy " . errCount . " file(s) to destination. Type=*." . sExt
@@ -530,7 +532,7 @@ else
 
 Gui,Add,Button, x320 y92 w147 h35 center +Disabled  vRSvar gRSbtn , Restore...
 
-Gui,Add,Button, x320 y139 w147 h35 center +Disabled  vBKvar gBKbtn , Backup...
+Gui,Add,Button, x320 y139 w147 h35 center +Disabled  vBKvar gBKbtn , Back up...
 
 Gui,Add,Button,x475 y92 w147 h35 +Disabled vDEvar gDEbtn,Deactivate
 Gui,Add,Button,x475 y139 w147 h35 center vACvar gACbtn,Activate

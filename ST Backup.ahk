@@ -1269,10 +1269,6 @@ ExitSub:
         IniWrite, %bRecursive%, STB_settings.ini, Option, Recursive
         IniWrite, %iMaxLogSize%, STB_settings.ini, Option, Max Log Size
         FormatTime, sNow, %a_now% T12, [yyyy-MM-dd%a_space%HH:mm:ss]
-        if FileExist(sMainLogPath)
-        {
-            FileAppend ,`n%sNow% exiting program..., %sMainLogPath%
-        }
         sleep, 50
     }
     ExitApp

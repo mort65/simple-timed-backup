@@ -1265,7 +1265,7 @@ ExitSub:
         IniWrite, %iBackupCount%, STB_settings.ini, Option, Backups Count 
         IniWrite, %iBkupNum%, STB_settings.ini, History, Next Backup Number
         IniWrite, %sExts%, STB_settings.ini, Option , Extensions
-        IniWrite, %sCustomDest%, STB_settings.ini, History, Last Manual Backup Locations
+        IniWrite, %sCustomDest%, STB_settings.ini, History, Last Manual Backup Location
         IniWrite, %bRecursive%, STB_settings.ini, Option, Recursive
         IniWrite, %iMaxLogSize%, STB_settings.ini, Option, Max Log Size
         FormatTime, sNow, %a_now% T12, [yyyy-MM-dd%a_space%HH:mm:ss]

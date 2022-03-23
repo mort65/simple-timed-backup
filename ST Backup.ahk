@@ -24,7 +24,7 @@ bCopyallExts:=false
 bRecursive:=false
 errIcon := 16
 infoIcon := 64
-curVersion:=1.111
+curVersion:=1.112
 myName:="Simple Timed Backup"
 _WinH := 328
 _WinW := 635
@@ -789,7 +789,7 @@ ACbtn:
     Gui, Submit , NoHide
     GuiControlGet, sPath,, SLedit
     GuiControlGet, sDest,, BLedit
-    GuiControlGet, tInterVal,, BIedit
+    GuiControlGet, mInterval,, BIedit
     GuiControlGet, iBackupCount,, BCedit
     GuiControlGet, Extstring ,, extsediVar,
     trimExts(Extstring)
@@ -799,7 +799,7 @@ ACbtn:
     GuiControl,,extsediVar, %sExts% 
     StringSplit, ExtArr, Extstring ,`;,
     sPVar :=InStr(FileExist(spath),"D")
-    if(tInterval="" )
+    if(mInterval="" )
     {
         tInterval := 300000
         GuiControl, , BIud,%tInterval%
@@ -814,7 +814,7 @@ ACbtn:
         GuiControl,Focus, SLedit
         Return
     }
-    Else if tInterval not between 1 and 720
+    Else if mInterval not between 1 and 720
     {        
         msgbox,% errIcon,, Backup Interval is not within the valid range: 1-720
         return
@@ -865,7 +865,7 @@ ACbtn:
         }
         GuiControl,, BLedit, %sDest%
         GuiControl,, SLedit, %sPath%
-        tInterval:=tInterval*60000
+        tInterval:=mInterval*60000
         GuiControl,Disable,ACvar
         GuiControl,Enable,DEvar
         GuiControl,Disable,RSvar

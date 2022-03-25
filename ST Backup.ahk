@@ -729,8 +729,7 @@ SPbtn:
 {
     Gui +Disabled
     FileSelectFolder,OutputVar1 ,*%sPath% , 0, Files location
-    Gui -Disabled
-    Gui,Show, autoSize center ,%myTitle%    
+    Gosub, resetGUI   
     
     if OutputVar1 =
         return
@@ -746,8 +745,7 @@ BPbtn:
 {
     Gui +Disabled
     FileSelectFolder,OutputVar2 ,*%sDest% , 3, Backups location
-    Gui -Disabled
-    Gui,Show, autoSize center ,%myTitle%
+    Gosub, resetGUI
     
     if OutputVar2 =
         return

@@ -24,12 +24,13 @@ bCopyallExts:=false
 bRecursive:=false
 errIcon := 16
 infoIcon := 64
-curVersion:=1.112
+curVersion:=1.115
 myName:="Simple Timed Backup"
 _WinH := 328
 _WinW := 635
 iMaxLogSize := 500 ;kb
 _backup_ext:=".stb.zip"
+bInfiniteBkup:=false
 
 _font:="Tahoma"
 
@@ -450,15 +451,17 @@ CopyFiles(sExt,sDestFolder,sSourceFolder:="",bRecursive:=false)
 
 if (FileExist("STB_settings.ini"))
 {
+    sleep, 50
     IniRead, _sPath, STB_settings.ini, Paths, Files Location 
     IniRead, _sDest, STB_settings.ini, Paths, Backups Location
     IniRead, sCustomDest, STB_settings.ini, History, Last Manual Backup Location
-    IniRead, tInterval, STB_settings.ini, Option, Backup Interval , 300000 
-    IniRead, iBackupCount, STB_settings.ini, Option, Backups Count , 10
-    IniRead, iMaxLogSize, STB_settings.ini, Option, Max Log Size , 500
+    IniRead, tInterval, STB_settings.ini, Option, Backup Interval, 300000 
+    IniRead, iBackupCount, STB_settings.ini, Option, Backups Count, 10
+    IniRead, iMaxLogSize, STB_settings.ini, Option, Max Log Size, 500
     IniRead, iBkupNum, STB_settings.ini, History, Next Backup Number, 1
     IniRead, sExts, STB_settings.ini, Option , Extensions, "*;"
-    IniRead, bRecursive, STB_settings.ini, Option, Recursive , 0
+    IniRead, bRecursive, STB_settings.ini, Option, Recursive, 0
+    IniRead, bInfiniteBkup, STB_settings.ini, Option, Unlimited Backups, 0
     sPath := StrReplaceVar(trimPath(_sPath))
     sDest := StrReplaceVar(trimPath(_sDest))
     if (sPath<>"") 
@@ -487,6 +490,7 @@ if (FileExist("STB_settings.ini"))
     IniWrite, %iBkupNum%, STB_settings.ini, History, Next Backup Number
     IniWrite, %sExts%, STB_settings.ini, Option, Extensions
     IniWrite, %bRecursive%, STB_settings.ini, Option, Recursive
+    IniWrite, %bInfiniteBkup%, STB_settings.ini, Option, Unlimited Backups
 }
 
 Hotkey, ^!x, ExitSub
@@ -519,7 +523,20 @@ Gui,Add,Edit,x85 y114 w70 h18 Number vBCedit gBCedit
 Gui,Add,UpDown, 0x20  Range1-10000,%iBackupCount%,vBCud
 Gui,Add, GroupBox, x10 y134 w306 h41 vBFGbx, Backup these file types
 Gui,Add,Edit,x15 y150 w296 h20  Lowercase vextsediVar gextsEdit,%sExts%
-Gui,Add,Checkbox,x166 y119 w140 h20 -Wrap  vRecursiveVar gRecursivecbx,Recursive
+Gui,Add,Checkbox,x166 y115 w70 h20 -Wrap  vInfiniteBkupVar gInfiniteBkupcbx, Unlimited
+
+if (bInfiniteBkup)
+{
+    GuiControl,, InfiniteBkupVar, 1
+    GuiControl,Disable,BCedit
+}
+else
+{
+    GuiControl,, InfiniteBkupVar, 0
+    GuiControl,Enable,BCedit
+}
+
+Gui,Add,Checkbox,x242 y115 w70 h20 -Wrap  vRecursiveVar gRecursivecbx,Recursive
 
 if (bRecursive)
 {
@@ -538,7 +555,7 @@ Gui,Add,Button,x475 y92 w147 h35 +Disabled vDEvar gDEbtn,Deactivate
 Gui,Add,Button,x475 y139 w147 h35 center vACvar gACbtn,Activate
 Gui,Font, s8 normal, %_font%
 Gui,Add,Text,x166 y97 w80 h13 left ,Max Log Size
-Gui,Add,Edit,x242 y97 w70 h18 number vLSedit gLSedit
+Gui,Add,Edit,x242 y95 w70 h18 number vLSedit gLSedit
 Gui,Add,UpDown, 0x20 Range10-100000 vLSud,%iMaxLogSize%
 
 if sPath !=
@@ -572,6 +589,7 @@ BKvar_TT := "Takes a manual backup inside the selected folder."
 RSvar_TT := "Restore a backup archive to the source folder."
 ZipBackupvar_TT := "Toggles the compression of backups."
 RecursiveVar_TT := "Toggles backup for files in subfolders."
+InfiniteBkupVar_TT := "Toggles unlimited backups without overwriting previous ones."
 BIedit_TT := "The time between auto-updates in minutes."
 EDbtnvar_TT := "Edit what file types to backup."
 mainStatusBarVar_TT := ""
@@ -783,6 +801,23 @@ Recursivecbx:
     IniWrite, %bRecursive%, STB_settings.ini, Option, Recursive
     Return    
 }
+
+
+InfiniteBkupcbx:
+{
+    bInfiniteBkup := !bInfiniteBkup
+    if (bInfiniteBkup)
+    {
+        GuiControl,Disable,BCedit
+    }
+    Else
+    {
+        GuiControl,Enable,BCedit
+    }
+    IniWrite, %bInfiniteBkup%, STB_settings.ini, Option, Unlimited Backups
+    Return 
+}
+
     
 ACbtn:
 { 
@@ -871,6 +906,7 @@ ACbtn:
         GuiControl,Disable,RSvar
         GuiControl,Disable,SPvar
         GuiControl,Disable,BPvar
+        GuiControl,Disable,InfiniteBkupVar
         GuiControl,Disable,BCedit
         GuiControl,Disable,BIedit
         GuiControl,Disable,SLedit
@@ -950,7 +986,15 @@ DEbtn:
     GuiControl,Enable,RSvar
     GuiControl,Enable,SPvar
     GuiControl,Enable,BPvar
-    GuiControl,Enable,BCedit
+    GuiControl,Enable,InfiniteBkupVar
+    if (bInfiniteBkup)
+    {
+        GuiControl,Disable,BCedit
+    }
+    Else
+    {
+        GuiControl,Enable,BCedit
+    }
     GuiControl,Enable,BIedit
     GuiControl,Enable,SLedit
     GuiControl,Enable,BLedit
@@ -1054,7 +1098,7 @@ backup:
     }
     zipBackup(sDest "\Backup_" iBkupNum)
     iBkupNum := iBkupNum + 1
-    if (iBkupNum > iBackupCount )
+    if (!bInfiniteBkup && (iBkupNum > iBackupCount ))
     {
         iBkupNum := 1
     }
@@ -1264,9 +1308,10 @@ ExitSub:
         IniWrite, %tInterval%, STB_settings.ini, Option, Backup Interval 
         IniWrite, %iBackupCount%, STB_settings.ini, Option, Backups Count 
         IniWrite, %iBkupNum%, STB_settings.ini, History, Next Backup Number
-        IniWrite, %sExts%, STB_settings.ini, Option , Extensions
+        IniWrite, %sExts%, STB_settings.ini, Option, Extensions
         IniWrite, %sCustomDest%, STB_settings.ini, History, Last Manual Backup Location
         IniWrite, %bRecursive%, STB_settings.ini, Option, Recursive
+        IniWrite, %bInfiniteBkup%, STB_settings.ini, Option, Unlimited Backups
         IniWrite, %iMaxLogSize%, STB_settings.ini, Option, Max Log Size
         FormatTime, sNow, %a_now% T12, [yyyy-MM-dd%a_space%HH:mm:ss]
         sleep, 50

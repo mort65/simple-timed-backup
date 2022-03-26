@@ -515,7 +515,7 @@ Gui,Add,Button,x592 y44 w30 h23 r1 center vBPvar gBPbtn,...
 Gui,Add, GroupBox, x5 y80 w465 h101 vBSGbx,
 Gui,Add,Text,x10 y97 w80 h13 left ,Backup every
 Gui,Add,Edit,x85 y95 w70 h18  number vBIedit gBIedit
-mInterval := (tInterval/60000)
+mInterval := (tInterval//60000)
 Gui,Add,UpDown, 0x20  Range1-720 ,%mInterval%,vBIud
 Gui,Add,Text,x10 y116 w80 h13  left ,Backup count
 
@@ -835,11 +835,13 @@ ACbtn:
     if(mInterval="" )
     {
         tInterval := 300000
-        GuiControl, , BIud,%tInterval%
+        mInterval := 5
+        GuiControl, , BIud,%mInterval%
     }
     else if (iBackupCount="")
     {
         iBackupCount := 10
+        GuiControl, , BCud,%iBackupCount%
     }
     else if (sPVar=0)
     {
@@ -852,8 +854,8 @@ ACbtn:
         msgbox,% errIcon,, Backup Interval is not within the valid range: 1-720
         return
     }
-    Else if iBackupCount not between 1 and 10000
-    {        
+    Else if (!bInfiniteBkup && (iBackupCount not between 1 and 10000))
+    {
         msgbox,% errIcon,, Backup Count is not within the valid range: 1-10000
         return
     }
@@ -898,7 +900,7 @@ ACbtn:
         }
         GuiControl,, BLedit, %sDest%
         GuiControl,, SLedit, %sPath%
-        tInterval:=mInterval*60000
+        tInterval := mInterval * 60000
         GuiControl,Disable,ACvar
         GuiControl,Enable,DEvar
         GuiControl,Disable,RSvar
@@ -932,9 +934,9 @@ ACbtn:
         if(iBkupNum="")
         {
             iBkupNum := 1
-        }else  {
+        }else if (!bInfiniteBkup) {
             if iBkupNum not between 1 and %iBackupCount%
-            iBkupNum := 1
+                iBkupNum := 1
         }
         sleep,2000
         bCopyallExts:=false
@@ -1046,7 +1048,8 @@ ToggleBackup:
     {
         if(tInterval < 60000)
         {
-            tInterval:=60000
+            tInterval:= 60000
+            mInterval := 5
         }
         SetTimer, Backup, %tInterval%
     }else  {
@@ -1065,6 +1068,11 @@ ToggleBackup:
 
 backup:
 {
+    if (bInfiniteBkup)
+    {
+        While (FileExist(sDest . "\Backup_" . iBkupNum . _backup_ext))
+            iBkupNum += 1
+    }
     sBackupPath := sDest . "\Backup_" . iBkupNum
     sBackupLogPath := sBackupPath . "\stbackup_log.txt"
     FileDelete, %sBackupLogPath%

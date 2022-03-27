@@ -21,17 +21,18 @@ sExts := ""
 iBackupCount := 10
 tInterval := 300000 ; 5 min
 toggle := 0
-bCopyallExts:=false
-bRecursive:=false
+bCopyallExts := false
+bRecursive := false
 errIcon := 16
 infoIcon := 64
-curVersion:=1.117
-myName:="Simple Timed Backup"
+curVersion := 1.117
+myName :="Simple Timed Backup"
 _WinH := 328
 _WinW := 635
 iMaxLogSize := 500 ;kb
-_backup_ext:=".stb.zip"
-bInfiniteBkup:=false
+_backup_ext := ".stb.zip"
+bInfiniteBkup := false
+iBkupNum := 1
 
 _font:="Tahoma"
 
@@ -472,7 +473,7 @@ if (FileExist("STB_settings.ini"))
     setvar(tInterval,Option_BackupInterval,300000)
     setvar(iBackupCount,Option_BackupsCount,10)
     setvar(iMaxLogSize,Option_MaxLogSize,500)
-    setvar(iBkupNum,History_NextBackupNumber)
+    setvar(iBkupNum,History_NextBackupNumber,1)
     setvar(sExts,Option_Extensions,"*;")
     setvar(bRecursive,Option_Recursive)
     setvar(bInfiniteBkup,Option_UnlimitedBackups)

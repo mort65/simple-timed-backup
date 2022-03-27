@@ -7,6 +7,7 @@ SetWorkingDir %A_ScriptDir%  ; Ensures a consistent starting directory.
 #NoTrayIcon
 
 #Include Class_CtlColors.ahk
+#Include Class_Ini.ahk
 
 sPath := ""
 sDest := ""
@@ -24,7 +25,7 @@ bCopyallExts:=false
 bRecursive:=false
 errIcon := 16
 infoIcon := 64
-curVersion:=1.116
+curVersion:=1.117
 myName:="Simple Timed Backup"
 _WinH := 328
 _WinW := 635
@@ -336,7 +337,7 @@ bIsParentPath(sParentPath,sChildPath)
 
 checkNum(ByRef Variable, ControlID, MinVal, MaxVal)
 {
-	hasSpaces:=RegExMatch(Variable,"[\s]")		; Check if contains spaces
+    hasSpaces:=RegExMatch(Variable,"[\s]")		; Check if contains spaces
     numVar:=RegExReplace(Variable,"[^0-9.]+")	; Remove all non numerics or .
 	ControlGet,inPos, CurrentCol,, Edit1,A		; Get input position of the edit box.
 	StringSplit,splitNum,numVar,.				; Allow only one ".", the leftmost is preserved.
@@ -384,6 +385,18 @@ StrReplaceVar(strIn)
         }
     }
     return strIn
+}
+
+setVar(ByRef var,value,def:="NULL") 
+{
+    if (value) 
+    {
+        var:=value
+    } 
+    else if (def!="NULL") 
+    {
+      var:=def  
+    }
 }
 
 CopyFiles(sExt,sDestFolder,sSourceFolder:="",bRecursive:=false)   
@@ -452,16 +465,17 @@ CopyFiles(sExt,sDestFolder,sSourceFolder:="",bRecursive:=false)
 if (FileExist("STB_settings.ini"))
 {
     sleep, 50
-    IniRead, _sPath, STB_settings.ini, Paths, Files Location 
-    IniRead, _sDest, STB_settings.ini, Paths, Backups Location
-    IniRead, sCustomDest, STB_settings.ini, History, Last Manual Backup Location
-    IniRead, tInterval, STB_settings.ini, Option, Backup Interval, 300000 
-    IniRead, iBackupCount, STB_settings.ini, Option, Backups Count, 10
-    IniRead, iMaxLogSize, STB_settings.ini, Option, Max Log Size, 500
-    IniRead, iBkupNum, STB_settings.ini, History, Next Backup Number, 1
-    IniRead, sExts, STB_settings.ini, Option , Extensions, "*;"
-    IniRead, bRecursive, STB_settings.ini, Option, Recursive, 0
-    IniRead, bInfiniteBkup, STB_settings.ini, Option, Unlimited Backups, 0
+    myINI := new Ini(A_ScriptDir . "\STB_settings.ini")
+    setvar(_sPath,Paths_FilesLocation)
+    setvar(_sDest,Paths_BackupsLocation)
+    setvar(sCustomDest,History_LastManualBackupLocation)
+    setvar(tInterval,Option_BackupInterval,300000)
+    setvar(iBackupCount,Option_BackupsCount,10)
+    setvar(iMaxLogSize,Option_MaxLogSize,500)
+    setvar(iBkupNum,History_NextBackupNumber)
+    setvar(sExts,Option_Extensions,"*;")
+    setvar(bRecursive,Option_Recursive)
+    setvar(bInfiniteBkup,Option_UnlimitedBackups)
     sPath := StrReplaceVar(trimPath(_sPath))
     sDest := StrReplaceVar(trimPath(_sDest))
     if (sPath<>"") 
@@ -475,22 +489,32 @@ if (FileExist("STB_settings.ini"))
     }
     sMainLogPath := sDest . sMainLogName
     sCustomDest := trimPath(sCustomDest)
-    if (sCustomDest<>"" and sCustomDest=sPath) {
+    if (sCustomDest<>"" and sCustomDest=sPath) 
+    {
         sCustomDest .="\ST_Backups"
         IniWrite, %sCustomDest%, STB_settings.ini, History, Last Manual Backup Location
     }
-}else  {
+}
+else 
+{
     sExts:= "*;"
-    IniWrite, %sPath%, STB_settings.ini, Paths, Files Location
-    IniWrite, %sDest%, STB_settings.ini, Paths, Backups Location
-    IniWrite, %sCustomDest%, STB_settings.ini, History, Last Manual Backup Location
-    IniWrite, %tInterval%, STB_settings.ini, Option, Backup Interval 
-    IniWrite, %iBackupCount%, STB_settings.ini, Option, Backups Count
-    IniWrite, %iMaxLogSize%, STB_settings.ini, Option, Max Log Size
-    IniWrite, %iBkupNum%, STB_settings.ini, History, Next Backup Number
-    IniWrite, %sExts%, STB_settings.ini, Option, Extensions
-    IniWrite, %bRecursive%, STB_settings.ini, Option, Recursive
-    IniWrite, %bInfiniteBkup%, STB_settings.ini, Option, Unlimited Backups
+    str := "[Paths]"
+    str := str . "`nFiles Location=" . sPath
+    str := str . "`nBackups Location=" . sDest
+    str := str . "`n[History]"
+    str := str . "`nLast Manual Backup Location=" . sCustomDest
+    str := str . "`nNext Backup Number=" . iBkupNum
+    str := str . "`n[Option]"
+    str := str . "`nBackup Interval=" . tInterval
+    str := str . "`nBackups Count=" . iBackupCount
+    str := str . "`nMax Log Size=" . iMaxLogSize
+    str := str . "`nExtensions=" . sExts
+    str := str . "`nRecursive=" . bRecursive
+    str := str . "`nUnlimited Backups=" . bInfiniteBkup
+    str := Trim(str,"`n`r `t")
+    FileAppend, %str%,%A_ScriptDir%\STB_settings.ini,UTF-16 
+    sleep, 50
+    myINI := new Ini(A_ScriptDir . "\STB_settings.ini")
 }
 
 Hotkey, ^!x, ExitSub
@@ -1287,40 +1311,40 @@ BKbtn:
 
 ExitSub:
 {
-    if A_ExitReason not in Logoff,Shutdown
+    SetTImer, Backup, Off
+    sleep, 50
+    GuiControlGet, Extstring ,, extsediVar,
+    trimExts(Extstring)
+    if(Extstring ="")
     {
-        SetTImer, Backup, Off
-        sleep, 50
-        GuiControlGet, Extstring ,, extsediVar,
-        trimExts(Extstring)
-        if(Extstring ="")
-        {
-            sExts := "*;"
-        }else  {
-            sExts := Extstring
-        }
-        if (_sPath<>"" and (StrReplaceVar(_sPath) = sPath)) {
-            IniWrite, %_sPath%, STB_settings.ini, Paths, Files Location
-        }
-        else {
-            IniWrite, %sPath%, STB_settings.ini, Paths, Files Location            
-        }
-        if (_sDest<>"" and ((StrReplaceVar(_sDest) = sDest))) {
-            IniWrite, %_sDest%, STB_settings.ini, Paths, Backups Location
-        }
-        else {
-            IniWrite, %sDest%, STB_settings.ini, Paths, Backups Location            
-        }
-        IniWrite, %tInterval%, STB_settings.ini, Option, Backup Interval 
-        IniWrite, %iBackupCount%, STB_settings.ini, Option, Backups Count 
-        IniWrite, %iBkupNum%, STB_settings.ini, History, Next Backup Number
-        IniWrite, %sExts%, STB_settings.ini, Option, Extensions
-        IniWrite, %sCustomDest%, STB_settings.ini, History, Last Manual Backup Location
-        IniWrite, %bRecursive%, STB_settings.ini, Option, Recursive
-        IniWrite, %bInfiniteBkup%, STB_settings.ini, Option, Unlimited Backups
-        IniWrite, %iMaxLogSize%, STB_settings.ini, Option, Max Log Size
-        FormatTime, sNow, %a_now% T12, [yyyy-MM-dd%a_space%HH:mm:ss]
-        sleep, 50
+        sExts := "*;"
     }
+    else  
+    {
+        sExts := Extstring
+    }
+    if (_sPath<>"" and (StrReplaceVar(_sPath) = sPath)) {
+        setvar(Paths_FilesLocation,_sPath)
+    }
+    else 
+    {
+        setvar(Paths_FilesLocation,sPath)
+    }
+    if (_sDest<>"" and (StrReplaceVar(_sDest) = sDest)) {
+        setvar(Paths_BackupsLocation,_sDest)
+    }
+    else 
+    {
+        setvar(Paths_BackupsLocation,sDest)
+    }
+    setvar(History_LastManualBackupLocation,sCustomDest)
+    setvar(Option_BackupInterval,tInterval,300000)
+    setvar(Option_BackupsCount,iBackupCount,10)
+    setvar(Option_MaxLogSize,iMaxLogSize,500)
+    setvar(History_NextBackupNumber,iBkupNum)
+    setvar(Option_Extensions,sExts,"*;")
+    setvar(Option_Recursive,bRecursive)
+    setvar(Option_UnlimitedBackups,bInfiniteBkup)
+    myINI.iniSave(A_ScriptDir . "\STB_settings.ini")
     ExitApp
 }

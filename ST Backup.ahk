@@ -388,13 +388,13 @@ StrReplaceVar(strIn)
     return strIn
 }
 
-setVar(ByRef var,value,def:="NULL") 
+setVar(ByRef var,value,def:="!NULL!") 
 {
     if (value) 
     {
         var:=value
     } 
-    else if (def!="NULL") 
+    else if (def!="!NULL!") 
     {
       var:=def  
     }

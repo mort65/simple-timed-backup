@@ -8,6 +8,8 @@ Class Ini {
     iniLoad will redo the iniInit function.
     
     iniSave will save all variables to the correct section & key.
+    
+    iniEdit will edit the specified key then reload the INI file.
     */
     inifile := ""
 

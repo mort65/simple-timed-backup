@@ -6,6 +6,7 @@ SetWorkingDir %A_ScriptDir%  ; Ensures a consistent starting directory.
 #SingleInstance, ignore 
 #NoTrayIcon
 
+#Include Class_Util.ahk
 #Include Class_CtlColors.ahk
 #Include Class_Ini.ahk
 
@@ -36,21 +37,9 @@ iBkupNum := 1
 _bExiting := False
 iniPath := A_ScriptDir . "\STB_settings.ini"
 
-_font:="Tahoma"
+_font :="Tahoma"
 
-getVersion(ver)
-{
-    index := InStr(ver,".")
-    return substr(ver,1,index+1) "." substr(ver,index+2,1)
-}
-
-myTitle:= myName " " getVersion(curVersion)
-
-IsEmpty(Dir){
-   Loop %Dir%\*.*, 0, 1
-      return 0
-   return 1
-}
+myTitle := myName " " util.getVersion(curVersion)
 
 AutoSize(DimSize, cList*) {
     Static cInfo := {}
@@ -99,69 +88,11 @@ AutoSize(DimSize, cList*) {
     }
 }
 
-Zip(sDir, sZip)
-{
-    If Not FileExist(sZip)
-    {
-        Header1 := "PK" . Chr(5) . Chr(6)
-        VarSetCapacity(Header2, 18, 0)
-        file := FileOpen(sZip,"w")
-        file.Write(Header1)
-        file.RawWrite(Header2,18)
-        file.close()
-    }
-    psh := ComObjCreate( "Shell.Application" )
-    pzip := psh.Namespace( sZip )
-    pzip.CopyHere( sDir, 4|16 )
-    Loop {
-        sleep 100
-        zippedItems := pzip.Items().count
-        ;ToolTip Zipping in progress..
-    } Until zippedItems=1 ;because sDir is just one file or folder
-    ;ToolTip
-}
-
-
-
-Unz(sZip, sUnz)
-{
-    fso := ComObjCreate("Scripting.FileSystemObject")
-    If Not fso.FolderExists(sUnz)
-    fso.CreateFolder(sUnz)
-    psh  := ComObjCreate("Shell.Application")
-    zippedItems := psh.Namespace( sZip ).items().count
-    psh.Namespace( sUnz ).CopyHere( psh.Namespace( sZip ).items, 4|16 )
-    Loop {
-        sleep 100
-        unzippedItems := psh.Namespace( sUnz ).items().count
-        ;ToolTip Unzipping in progress..
-        IfEqual,zippedItems,%unzippedItems%
-            break
-    }
-    ;ToolTip
-}
-
-psZip(inPath,outPath)
-{
-    RunWait PowerShell.exe -Command Compress-Archive -LiteralPath '%inPath%' -CompressionLevel Optimal -DestinationPath '%outPath%',, Hide UseErrorLevel
-    Return ErrorLevel
-}
-psUnzip(inPath,outPath)
-{
-    RunWait PowerShell.exe -Command Expand-Archive -LiteralPath '%inPath%' -DestinationPath '%outPath%',, Hide UseErrorLevel
-    Return ErrorLevel
-}
-
-psEscape(sPath)
-{
-    return RegExReplace(sPath, "[\[\]]", "``$0")
-}
-
 
 zipBackup(sPath)
 {
     if InStr(FileExist(sPath), "D") {
-        if IsEmpty(sPath) {
+        if util.IsEmpty(sPath) {
             return
         }
     }
@@ -172,12 +103,12 @@ zipBackup(sPath)
     FileDelete, %sParent%\%sName%.stb.zip
     FileDelete, %sPath%\%sName%.stb.zip
     sOut := sParent "\" sName ".stb.zip"
-    psOut := psEscape(sOut)
-    psPath := psEscape(sPath)
+    psOut := util.psEscape(sOut)
+    psPath := util.psEscape(sPath)
     Run PowerShell.exe -Command (Compress-Archive -Path '%psPath%\*' -CompressionLevel Optimal -DestinationPath '%sOut%'); if ($?) {(Remove-Item -force '%psPath%' -recurse -Confirm:$False);},, Hide UseErrorLevel
     if (ErrorLevel = "ERROR")
     {
-        Zip(sPath , sParent "\" sName ".stb.zip")      
+        util.Zip(sPath , sParent "\" sName ".stb.zip")      
         FileRemoveDir, %sPath%, 1
     }
     Return
@@ -243,7 +174,7 @@ logErrors(sExt,sBackupPath,errCount,bSilent:=true)
             FileAppend ,%sTime% backup started..., %sMainLogPath%
             FileAppend ,`n%sTime% backup: `, extension:%sExt% `, source:%sPath%\ `, destination:%sBackupPath%%_backup_ext%, %sMainLogPath%
         }           
-        sLog := "*." . sExt . " Backup: """ . trimPath(sBackupPath . _backup_ext) . """"
+        sLog := "*." . sExt . " Backup: """ . util.trimPath(sBackupPath . _backup_ext) . """"
         logEditAdd(sLog)
         if (FileExist(sBackupLogPath)) 
         {
@@ -277,138 +208,16 @@ logErrors(sExt,sBackupPath,errCount,bSilent:=true)
     Return
 }
 
-trimPath(strPath)
-{   
-    if (strPath="")
-    {
-        return strPath
-    }
-    break:=false
-    while(break=false)
-    {
-        break:=true
-        if (SubStr(strPath,StrLen(strPath)) = "\") 
-        {
-            strPath:=substr(strPath,1,StrLen(strPath)-1) 
-            break:=false
-        }
-        if (SubStr(strPath,StrLen(strPath)) = " ") 
-        {
-            strPath:=substr(strPath,1,StrLen(strPath)-1)
-            break:=false
-        }
-        if (SubStr(strPath,1,1) = " ") 
-        {
-            strPath:=substr(strPath,2)
-            break:=false
-        }
-    }
-    return strPath
-}
-
-shrinkString(strIn,maxLength,side)
-{
-    StringLower,side,side
-    if (StrLen(strIn) > maxLength) {
-        if (side="l") {
-            StringTrimLeft,strIn,strIn,StrLen(strIn) - maxLength
-            strIn := "..." . strIn
-        }
-        else if (side="m") {
-            tempStr:=SubStr(strIn,StrLen(strIn)//2)
-            StringTrimLeft,tempStr,tempStr,StrLen(strIn) - maxLength
-            if tempStr=
-                tempStr:=SubStr(strIn,0) 
-            strIn := SubStr(strIn,1, min(StrLen(strIn)//2-1,maxLength-1)) . "..." . tempStr
-        }
-        else if (side="r") {
-             StringTrimRight,strIn,strIn,StrLen(strIn) - maxLength
-             strIn := strIn . "..."
-             }
-       }
-        return strIn
-}
-
-bIsParentPath(sParentPath,sChildPath)
-{
-    If (StrReplace(sChildPath,sParentPath)=sChildPath)
-    {
-        return 0
-    }
-    return 1
-}
-
-checkNum(ByRef Variable, ControlID, MinVal, MaxVal)
-{
-    hasSpaces:=RegExMatch(Variable,"[\s]")		; Check if contains spaces
-    numVar:=RegExReplace(Variable,"[^0-9.]+")	; Remove all non numerics or .
-	ControlGet,inPos, CurrentCol,, Edit1,A		; Get input position of the edit box.
-	StringSplit,splitNum,numVar,.				; Allow only one ".", the leftmost is preserved.
-	if (splitNum0>2)							; This can be higher than three if user pastes in something with more than one dot.
-	{
-		numVar:=splitNum1 . "."
-		Loop, % splitNum0-1
-		{
-			ind:=A_Index+1
-			numVar.=splitNum%ind%	 
-		}	
-	}
-    if (numVar > MaxVal) {
-        numVar := MaxVal        
-    }
-    else if (numVar < MinVal) {
-        numVar := MinVal        
-    }
-	if (Variable==numVar && !hasSpaces) 		; If nothing changed and no spaces present, return
-		return
-    Variable := numVar
-	GuiControl,,%ControlID%,%numVar%		; Set text
-	PostMessage,0x00B1,inPos-2,inPos-2,Edit1,A 	; Move input caret to correct position, EM_SETSEL:=0x00B1
-}
-
-StrReplaceVar(strIn)
-{
-    ;replace the substring between two ? with content of a variable with the same name
-    index:=1
-    break:=false
-    while(break=false) {
-        break:=true
-        ChrIndex:=InStr(strIn,"?",,index,1)
-        if (ChrIndex > 0){
-            nextIndex:=InStr(strIn,"?",,ChrIndex+1,1)
-            if (nextIndex>0) {
-                strVar:=SubStr(strIn,ChrIndex + 1,(nextIndex-ChrIndex)-1)
-                strVar := %strVar%
-                strIn:= StrReplace(SubStr(strIn,1,ChrIndex), "?") . strVar . SubStr(strIn,nextIndex+1)
-                index := nextIndex+1
-                if (index < strLen(strIn) - 1) {
-                    break:=false
-                }
-            }
-        }
-    }
-    return strIn
-}
-
-varExist(ByRef v) { ; Requires 1.0.46+
-   return &v = &n ? 0 : v = "" ? 2 : 1
-}
-
-setVar(ByRef var,value,def:="!NULL!") 
-{
-    var := varExist(value) ? value : def != "!NULL!" ? def : var
-}
-
 CopyFiles(sExt,sDestFolder,sSourceFolder:="",bRecursive:=false)   
 {
     global sPath
     global sDest
-    sPath:= trimPath(sPath)
-    sDest:= trimPath(sDest)
-    sDestFolder:= trimPath(sDestFolder)
+    sPath:= util.trimPath(sPath)
+    sDest:= util.trimPath(sDest)
+    sDestFolder:= util.trimPath(sDestFolder)
     if !sSourceFolder
         sSourceFolder:=sPath
-    if IsEmpty(sSourceFolder)
+    if util.IsEmpty(sSourceFolder)
     {
         return -1
     }
@@ -437,7 +246,7 @@ CopyFiles(sExt,sDestFolder,sSourceFolder:="",bRecursive:=false)
             {
                 sDestFileLongPath := StrReplace(A_LoopFileLongPath,sSourceFolder,sDestFolder)
                 SplitPath, sDestFileLongPath,, sDestFileDir
-                If (bIsParentPath(sDest,A_LoopFileLongPath))
+                If (util.bIsParentPath(sDest,A_LoopFileLongPath))
                 {
                     ;The file is a backup that's inside the source folder
                     Continue
@@ -455,7 +264,7 @@ CopyFiles(sExt,sDestFolder,sSourceFolder:="",bRecursive:=false)
             }
         }
     }
-    if IsEmpty(sDestFolder)
+    if util.IsEmpty(sDestFolder)
     {
         return -1
     }
@@ -466,18 +275,18 @@ if (FileExist("STB_settings.ini"))
 {
     sleep, 50
     myINI := new Ini(iniPath)
-    setvar(_sPath,Paths_FilesLocation)
-    setvar(_sDest,Paths_BackupsLocation)
-    setvar(sCustomDest,History_LastManualBackupLocation)
-    setvar(tInterval,Option_BackupInterval,300000)
-    setvar(iBackupCount,Option_BackupsCount,10)
-    setvar(iMaxLogSize,Option_MaxLogSize,500)
-    setvar(iBkupNum,History_NextBackupNumber,1)
-    setvar(sExts,Option_Extensions,"*;")
-    setvar(bRecursive,Option_Recursive)
-    setvar(bInfiniteBkup,Option_UnlimitedBackups)
-    sPath := StrReplaceVar(trimPath(_sPath))
-    sDest := StrReplaceVar(trimPath(_sDest))
+    util.setVar(_sPath,Paths_FilesLocation)
+    util.setVar(_sDest,Paths_BackupsLocation)
+    util.setVar(sCustomDest,History_LastManualBackupLocation)
+    util.setVar(tInterval,Option_BackupInterval,300000)
+    util.setVar(iBackupCount,Option_BackupsCount,10)
+    util.setVar(iMaxLogSize,Option_MaxLogSize,500)
+    util.setVar(iBkupNum,History_NextBackupNumber,1)
+    util.setVar(sExts,Option_Extensions,"*;")
+    util.setVar(bRecursive,Option_Recursive)
+    util.setVar(bInfiniteBkup,Option_UnlimitedBackups)
+    sPath := util.StrReplaceVar(util.trimPath(_sPath))
+    sDest := util.StrReplaceVar(util.trimPath(_sDest))
     if (sPath<>"") 
     {
         if (sPath=sDest) 
@@ -488,7 +297,7 @@ if (FileExist("STB_settings.ini"))
         }        
     }
     sMainLogPath := sDest . sMainLogName
-    sCustomDest := trimPath(sCustomDest)
+    sCustomDest := util.trimPath(sCustomDest)
     if (sCustomDest<>"" and sCustomDest=sPath) 
     {
         sCustomDest .="\ST_Backups"
@@ -625,10 +434,13 @@ OnMessage(0x0203, "WM_LBUTTONDBLCLK")
 Return
 
 Resize:
+{
 	AutoSize("reset") ; Needs to reset if you changed the Control size manually.
     return
+}
 
 GuiSize:
+{
     If (A_EventInfo = 1) ; The window has been minimized.
 		Return
     AutoSize("x", "SPvar")
@@ -645,6 +457,7 @@ GuiSize:
     AutoSize("w h0.99", "LogEditVar")
     AutoSize("w","extsediVar")
     Return
+}
 
 WM_MOUSEMOVE()
 {
@@ -788,7 +601,7 @@ BPbtn:
 BIedit:
 {
     GuiControlGet ,InVar,, BIedit
-    checkNum(InVar, "BIedit", 1,720)
+    util.checkNum(InVar, "BIedit", 1,720)
     tInterval := InVar*60000
     myINI.iniEdit("Option","Backup Interval",tInterval)
     Return
@@ -797,7 +610,7 @@ BIedit:
 BCedit:
 {
     GuiControlGet ,InVar,, BCedit
-    checkNum(InVar, "BCedit", 1,10000)
+    util.checkNum(InVar, "BCedit", 1,10000)
     iBackupCount := InVar
     myINI.iniEdit("Option","Backups Count",iBackupCount)
     Return
@@ -806,7 +619,7 @@ BCedit:
 LSedit:
 {
     GuiControlGet, InVar,, LSedit
-    checkNum(InVar, "LSedit", 10,100000)
+    util.checkNum(InVar, "LSedit", 10,100000)
     iMaxLogSize := InVar
     myINI.iniEdit("Option","Max Log Size",iMaxLogSize)
     Return
@@ -850,8 +663,8 @@ ACbtn:
     GuiControlGet, iBackupCount,, BCedit
     GuiControlGet, Extstring ,, extsediVar,
     trimExts(Extstring)
-    sPath := trimPath(sPath)
-    sDest := trimPath(sDest)
+    sPath := util.trimPath(sPath)
+    sDest := util.trimPath(sDest)
     sExts := Extstring
     GuiControl,,extsediVar, %sExts% 
     StringSplit, ExtArr, Extstring ,`;,
@@ -892,7 +705,7 @@ ACbtn:
     {
         if (sPath=sDest)
         {
-            if (_sPath<>"" and (_sPath=_sDest) and (StrReplaceVar(_sPath)=sPath) and (StrReplaceVar(_sDest)=sDest)) 
+            if (_sPath<>"" and (_sPath=_sDest) and (util.StrReplaceVar(_sPath)=sPath) and (util.StrReplaceVar(_sDest)=sDest)) 
             {
                 _sDest.="\ST_Backups"
                 sDest.="\ST_Backups"
@@ -1141,8 +954,8 @@ RSbtn:
     GuiControlGet, sPath,, SLedit
     GuiControlGet, sDest,, BLedit
     GuiControlGet, Extstring ,, extsediVar,
-    sPath := trimPath(sPath)
-    sDest := trimPath(sDest)
+    sPath := util.trimPath(sPath)
+    sDest := util.trimPath(sDest)
     trimExts(Extstring)
     sExts := Extstring
     sPVar :=InStr(FileExist(sPath),"D")
@@ -1163,7 +976,7 @@ RSbtn:
     Gui,Show, autoSize center ,%myTitle%
     if (SelectedFile = "")
         Return
-    shortFile := shrinkString(SelectedFile,55,"l")
+    shortFile := util.shrinkString(SelectedFile,55,"l")
     Gui +Disabled
     MsgBox 547,Restore, Are you sure you want to restore this backup?`n`r"%shortFile%"
     IfMsgBox No
@@ -1181,7 +994,7 @@ RSbtn:
     tempPath:= sPath . "\._sb_restore"
     FileRemoveDir, %tempPath%, 1
     FileCreateDir, %tempPath%
-    Unz(SelectedFile, tempPath)
+    util.Unz(SelectedFile, tempPath)
     if not FileExist(tempPath . sMainLogName)
     {
         FileRemoveDir, %tempPath%, 1
@@ -1194,7 +1007,7 @@ RSbtn:
     FileRemoveDir, %tempPath%, 1
     msgBox ,% infoIcon,, Restore finished.
     Gosub, resetGUI
-    strLog := "Restore: """ . trimPath(SelectedFile) . """"
+    strLog := "Restore: """ . util.trimPath(SelectedFile) . """"
     logEditAdd(strLog)
     sMainLogPath := sDest . sMainLogName
     FormatTime, sNow, %a_now% T12, [yyyy-MM-dd%a_space%HH:mm:ss]
@@ -1215,8 +1028,8 @@ BKbtn:
     GuiControlGet, sPath,, SLedit
     GuiControlGet, sDest,, BLedit
     GuiControlGet, Extstring ,, extsediVar,
-    sPath := trimPath(sPath)
-    sDest := trimPath(sDest)
+    sPath := util.trimPath(sPath)
+    sDest := util.trimPath(sDest)
     trimExts(Extstring)
     sExts := Extstring
     GuiControl,,extsediVar, %sExts%  
@@ -1329,28 +1142,28 @@ ExitFunc()
     {
         sExts := Extstring
     }
-    if (_sPath<>"" and (StrReplaceVar(_sPath) = sPath)) {
-        setvar(Paths_FilesLocation,_sPath)
+    if (_sPath<>"" and (util.StrReplaceVar(_sPath) = sPath)) {
+        util.setVar(Paths_FilesLocation,_sPath)
     }
     else 
     {
-        setvar(Paths_FilesLocation,sPath)
+        util.setVar(Paths_FilesLocation,sPath)
     }
-    if (_sDest<>"" and (StrReplaceVar(_sDest) = sDest)) {
-        setvar(Paths_BackupsLocation,_sDest)
+    if (_sDest<>"" and (util.StrReplaceVar(_sDest) = sDest)) {
+        util.setVar(Paths_BackupsLocation,_sDest)
     }
     else 
     {
-        setvar(Paths_BackupsLocation,sDest)
+        util.setVar(Paths_BackupsLocation,sDest)
     }
-    setvar(History_LastManualBackupLocation,sCustomDest)
-    setvar(Option_BackupInterval,tInterval,300000)
-    setvar(Option_BackupsCount,iBackupCount,10)
-    setvar(Option_MaxLogSize,iMaxLogSize,500)
-    setvar(History_NextBackupNumber,iBkupNum)
-    setvar(Option_Extensions,sExts,"*;")
-    setvar(Option_Recursive,bRecursive)
-    setvar(Option_UnlimitedBackups,bInfiniteBkup)
+    util.setVar(History_LastManualBackupLocation,sCustomDest)
+    util.setVar(Option_BackupInterval,tInterval,300000)
+    util.setVar(Option_BackupsCount,iBackupCount,10)
+    util.setVar(Option_MaxLogSize,iMaxLogSize,500)
+    util.setVar(History_NextBackupNumber,iBkupNum)
+    util.setVar(Option_Extensions,sExts,"*;")
+    util.setVar(Option_Recursive,bRecursive)
+    util.setVar(Option_UnlimitedBackups,bInfiniteBkup)
     myINI.iniSave()
     ExitApp
 }

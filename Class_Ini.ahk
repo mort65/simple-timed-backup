@@ -4,7 +4,9 @@ Class Ini {
     /*
     iniInit will read the specified INI file and load all section and key names,
     and assign all the associated keys to variables of section_keyname.
-
+    
+    iniLoad will redo the iniInit function.
+    
     iniSave will save all variables to the correct section & key.
     */
     inifile := ""

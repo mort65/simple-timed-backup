@@ -11,7 +11,7 @@ Class Util {
     __Delete() {
         If This["!Access_Denied!"]
          Return
-        This.Free() ; free GDI resources
+        This.Free()
     }
     ; ===================================================================================================================
     ; ClassInit       Internal creation of a new instance to ensure that __Delete() will be called.

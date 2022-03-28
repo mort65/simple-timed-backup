@@ -34,6 +34,7 @@ _backup_ext := ".stb.zip"
 bInfiniteBkup := false
 iBkupNum := 1
 _bExiting := False
+iniPath := A_ScriptDir . "\STB_settings.ini"
 
 _font:="Tahoma"
 
@@ -464,7 +465,7 @@ CopyFiles(sExt,sDestFolder,sSourceFolder:="",bRecursive:=false)
 if (FileExist("STB_settings.ini"))
 {
     sleep, 50
-    myINI := new Ini(A_ScriptDir . "\STB_settings.ini")
+    myINI := new Ini(iniPath)
     setvar(_sPath,Paths_FilesLocation)
     setvar(_sDest,Paths_BackupsLocation)
     setvar(sCustomDest,History_LastManualBackupLocation)
@@ -482,7 +483,7 @@ if (FileExist("STB_settings.ini"))
         if (sPath=sDest) 
         {
             sDest .= "\ST_Backups"
-            IniWrite, %sDest%, STB_settings.ini, Paths, Backups Location
+            myINI.iniEdit("Paths","Backups Location",sDest)
             
         }        
     }
@@ -491,7 +492,7 @@ if (FileExist("STB_settings.ini"))
     if (sCustomDest<>"" and sCustomDest=sPath) 
     {
         sCustomDest .="\ST_Backups"
-        IniWrite, %sCustomDest%, STB_settings.ini, History, Last Manual Backup Location
+        myINI.iniEdit("History","Last Manual Backup Location",sCustomDest)
     }
 }
 else 
@@ -511,9 +512,9 @@ else
     str := str . "`nRecursive=" . bRecursive
     str := str . "`nUnlimited Backups=" . bInfiniteBkup
     str := Trim(str,"`n`r `t")
-    FileAppend, %str%,%A_ScriptDir%\STB_settings.ini,UTF-16 
+    FileAppend, %str%,%iniPath%,UTF-16 
     sleep, 50
-    myINI := new Ini(A_ScriptDir . "\STB_settings.ini")
+    myINI := new Ini(iniPath)
 }
 
 Hotkey, ^!x, ExitFunc
@@ -760,7 +761,7 @@ SPbtn:
     GuiControl, Enabled, BKvar
     GuiControl, Enabled, RSvar
     sPath := OutputVar1
-    IniWrite, %sPath%, STB_settings.ini, Paths, Files Location
+    myINI.iniEdit("Paths","Files Location",sPath)
     Return
 }
 
@@ -779,8 +780,8 @@ BPbtn:
     GuiControl,, BLedit, %OutputVar2%
     sDest := OutputVar2
     sMainLogPath := sDest . sMainLogName
-    GuiControl, Enabled, BKvar 
-    IniWrite, %sDest%, STB_settings.ini, Paths, Backups Location
+    GuiControl, Enabled, BKvar
+    myINI.iniEdit("Paths","Backups Location",sDest)
     Return
 }
 
@@ -789,7 +790,7 @@ BIedit:
     GuiControlGet ,InVar,, BIedit
     checkNum(InVar, "BIedit", 1,720)
     tInterval := InVar*60000
-    IniWrite, %tInterval%, STB_settings.ini, Option, Backup Interval 
+    myINI.iniEdit("Option","Backup Interval",tInterval)
     Return
 }
 
@@ -798,7 +799,7 @@ BCedit:
     GuiControlGet ,InVar,, BCedit
     checkNum(InVar, "BCedit", 1,10000)
     iBackupCount := InVar
-    IniWrite, %iBackupCount%, STB_settings.ini, Option, Backups Count
+    myINI.iniEdit("Option","Backups Count",iBackupCount)
     Return
 }
 
@@ -807,7 +808,7 @@ LSedit:
     GuiControlGet, InVar,, LSedit
     checkNum(InVar, "LSedit", 10,100000)
     iMaxLogSize := InVar
-    IniWrite, %iMaxLogSize%, STB_settings.ini, Option, Max Log Size
+    myINI.iniEdit("Option","Max Log Size",iMaxLogSize)
     Return
 }
 
@@ -819,7 +820,7 @@ extsEdit:
 Recursivecbx:
 {
     bRecursive := !bRecursive
-    IniWrite, %bRecursive%, STB_settings.ini, Option, Recursive
+    myINI.iniEdit("Option","Recursive",bRecursive)
     Return    
 }
 
@@ -835,7 +836,7 @@ InfiniteBkupcbx:
     {
         GuiControl,Enable,BCedit
     }
-    IniWrite, %bInfiniteBkup%, STB_settings.ini, Option, Unlimited Backups
+    myINI.iniEdit("Option","Unlimited Backups",bInfiniteBkup)
     Return 
 }
 
@@ -895,11 +896,11 @@ ACbtn:
             {
                 _sDest.="\ST_Backups"
                 sDest.="\ST_Backups"
-                IniWrite, %_sDest%, STB_settings.ini, Paths, Backups Location
+                myINI.iniEdit("Paths","Backups Location",_sDest)
             }
             else {
                 sDest.="\ST_Backups"
-                IniWrite, %sDest%, STB_settings.ini, Paths, Backups Location
+                myINI.iniEdit("Paths","Backups Location",sDest)
             }
             GuiControl,, BLedit, %sDest%
             
@@ -1131,7 +1132,7 @@ backup:
     {
         iBkupNum := 1
     }
-    IniWrite, %iBkupNum%, STB_settings.ini, History, Next Backup Number
+    myINI.iniEdit("History","Next Backup Number",iBkupNum)
     Return
 }
 
@@ -1301,7 +1302,7 @@ BKbtn:
     }
     zipBackup(sBackupPath)
     sCustomDest := OutputVar3
-    IniWrite, %sCustomDest%, STB_settings.ini, History, Last Manual Backup Location    
+    myINI.iniEdit("History","Last Manual Backup Location",sCustomDest)  
     msgBox ,% infoIcon,, Backup finished.
     Gosub, resetGUI
     Run, Explorer /n`,/e`,%sCustomDest%
@@ -1350,6 +1351,6 @@ ExitFunc()
     setvar(Option_Extensions,sExts,"*;")
     setvar(Option_Recursive,bRecursive)
     setvar(Option_UnlimitedBackups,bInfiniteBkup)
-    myINI.iniSave(A_ScriptDir . "\STB_settings.ini")
+    myINI.iniSave()
     ExitApp
 }

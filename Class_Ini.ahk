@@ -48,11 +48,21 @@ Class Ini {
           } 
         }
     }
+    
+    iniLoad(inifile := "") {
+      if not inifile {
+        inifile:=this.inifile
+      }
+      this.iniInit(inifile)
+    }
 
-    iniSave(inifile){
+    iniSave(inifile := "") {
       global
       local sec, var, str
       str :=  ""
+      if not inifile {
+        inifile := this.inifile
+      }
       loop, %inisections%
         {
           sec := A_index
@@ -66,8 +76,16 @@ Class Ini {
               str := str . "=" . var
             }
         }
-        str := Trim(str,"`n`r `t") 
+        str := Trim(str, "`n`r `t") 
         FileDelete, %inifile%
-        FileAppend, %str%,%inifile%,UTF-16 
+        FileAppend, %str%,%inifile%,UTF-16
+    }
+    
+    iniEdit(sec, key, val, inifile := "") {
+        if not inifile {
+            inifile := this.inifile
+        }
+        IniWrite, %val%, %inifile%, %sec%, %key%
+        this.iniLoad()
     }
 }

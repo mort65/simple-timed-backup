@@ -33,6 +33,7 @@ iMaxLogSize := 500 ;kb
 _backup_ext := ".stb.zip"
 bInfiniteBkup := false
 iBkupNum := 1
+_bExiting := False
 
 _font:="Tahoma"
 
@@ -269,7 +270,7 @@ logErrors(sExt,sBackupPath,errCount,bSilent:=true)
         if (!bSilent) 
         {            
             msgBox,% errIcon,, Cannot copy some files!
-            Gosub, ExitSub
+            ExitFunc()
         }
     }
     Return
@@ -388,16 +389,13 @@ StrReplaceVar(strIn)
     return strIn
 }
 
+varExist(ByRef v) { ; Requires 1.0.46+
+   return &v = &n ? 0 : v = "" ? 2 : 1
+}
+
 setVar(ByRef var,value,def:="!NULL!") 
 {
-    if (value) 
-    {
-        var:=value
-    } 
-    else if (def!="!NULL!") 
-    {
-      var:=def  
-    }
+    var := varExist(value) ? value : def != "!NULL!" ? def : var
 }
 
 CopyFiles(sExt,sDestFolder,sSourceFolder:="",bRecursive:=false)   
@@ -518,8 +516,8 @@ else
     myINI := new Ini(A_ScriptDir . "\STB_settings.ini")
 }
 
-Hotkey, ^!x, ExitSub
-OnExit, ExitSub
+Hotkey, ^!x, ExitFunc
+OnExit("ExitFunc")
 
 Gui +LastFound
 Gui, -ToolWindow
@@ -1062,7 +1060,7 @@ DEbtn:
     
 GuiClose:
 {
-    Gosub, ExitSub
+    ExitFunc()
     Return
 }
 
@@ -1310,8 +1308,14 @@ BKbtn:
     return
 }
 
-ExitSub:
+ExitFunc()
 {
+    Global _bExiting
+    if (_bExiting)
+    {
+        return
+    }
+    _bExiting := True
     SetTImer, Backup, Off
     sleep, 50
     GuiControlGet, Extstring ,, extsediVar,

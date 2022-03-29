@@ -402,7 +402,7 @@ if sPath !=
 
 Gui,Font, s8 normal, %_font%
 Gui, Add, StatusBar,gmainStatusBar vmainStatusBarVar,%A_Tab%Ready
-Gui,Font, s7 , Lucida Console
+Gui,Font, s8 , Lucida Console
 Gui,add, edit, x9 y203 w614 h98 r9 left ReadOnly vLogEditVar gLogEdit
 Gui,Font, s8 normal, %_font%
 ;Gui,Show, w%_WinW% h%_WinH% center ,%myTitle%

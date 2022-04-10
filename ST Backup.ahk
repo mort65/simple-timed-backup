@@ -1019,7 +1019,7 @@ RSbtn:
     {
         FileAppend ,%sNow% Restored: %SelectedFile%,%sMainLogPath%
     } 
-    Run, Explorer /n`,/e`,%sPath%
+    ;Run, Explorer /n`,/e`,%sPath%
     return
 }
 
@@ -1118,7 +1118,7 @@ BKbtn:
     myINI.iniEdit("History","Last Manual Backup Location",sCustomDest)  
     msgBox ,% infoIcon,, Backup finished.
     Gosub, resetGUI
-    Run, Explorer /n`,/e`,%sCustomDest%
+    ;Run, Explorer /n`,/e`,%sCustomDest%
     return
 }
 
